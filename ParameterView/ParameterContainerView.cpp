@@ -89,7 +89,7 @@ void ParameterContainerView::FrameResized(
 	D_HOOK(("ParameterContainerView::FrameResized()\n"));
 
 	BView::FrameResized(width, height);
-	BRect b = ChildAt(0)->Frame();
+//	BRect b = ChildAt(0)->Frame();
 //	printf("param view:\n");
 //	b.PrintToStream();
 //	printf("hScroll:\n");
