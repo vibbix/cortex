@@ -33,6 +33,7 @@ SRCS= \
 	InfoView/EndPointInfoView.cpp \
 	InfoView/FileNodeInfoView.cpp \
 	InfoView/InfoView.cpp \
+	InfoView/InfoWindow.cpp \
 	InfoView/InfoWindowManager.cpp \
 	InfoView/LiveNodeInfoView.cpp \
 	MediaRoutingView/MediaJack.cpp \
