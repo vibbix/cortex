@@ -46,6 +46,7 @@ SRCS= \
 	NodeManager/NodeSyncThread.cpp \
 	ParameterView/ParameterWindowManager.cpp \
 	ParameterView/ParameterWindow.cpp \
+	ParameterView/ParameterContainerView.cpp \
 	Persistence/ExportContext.cpp \
 	Persistence/ImportContext.cpp \
 	Persistence/Importer.cpp \

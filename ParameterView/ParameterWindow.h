@@ -113,7 +113,7 @@ private:					// *** data members
 
 	media_node				m_node;
 
-	BView				   *m_parameterView;
+	BView				   *m_parameters;
 
 	BMessenger			   *m_notifyTarget;
 	
