@@ -51,10 +51,12 @@ ParameterWindow::ParameterWindow(
 	D_ALLOC(("ParameterWindow::ParameterWindow()\n"));
 
 	// add the nodes name to the title
-	char title[strlen(nodeInfo.name) + strlen(" parameters") + 1];
-	sprintf(title, "%s parameters", nodeInfo.name);
-	SetTitle(title);
-
+	{
+		char* title = new char[strlen(nodeInfo.name) + strlen(" parameters") + 1];
+		sprintf(title, "%s parameters", nodeInfo.name);
+		SetTitle(title);
+		delete [] title;
+	}
 	// add the menu bar
 	BMenuBar *menuBar = new BMenuBar(Bounds(), "ParameterWindow MenuBar");
 
@@ -139,7 +141,7 @@ void ParameterWindow::MessageReceived(
 			}
 			bool replace = false;
 			if ((message->FindBool("replace", &replace) == B_OK)
-			 && (replace = true)) {
+			 && (replace == true)) {
 				PostMessage(B_QUIT_REQUESTED);
 			}
 			break;
