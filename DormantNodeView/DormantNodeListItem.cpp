@@ -258,15 +258,34 @@ int __CORTEX_NAMESPACE__ compareName(
 										(reinterpret_cast<const void* const*>(lValue)));
 	const DormantNodeListItem *rItem = *(reinterpret_cast<const DormantNodeListItem* const*>
 										(reinterpret_cast<const void* const*>(rValue)));
-	int32 i = 0;
-	while (lItem->info().name[i] == rItem->info().name[i]) {
-		i++;
+	BString lString = lItem->info().name;
+	lString.ToUpper();
+	BString rString = rItem->info().name;
+	rString.ToUpper();
+	if (lString < rString) {
+		returnValue = -1;
 	}
-	if (lItem->info().name[i] > rItem->info().name[i]) {
-		return 1;
+	else if (lString > rString) {
+		returnValue = 1;
 	}
-	else {
-		return -1;
+	return returnValue;
+}
+
+int __CORTEX_NAMESPACE__ compareAddOnID(
+	const void *lValue,
+	const void *rValue) {
+	D_COMPARE(("compareAddOnID()\n"));
+
+	int returnValue = 0;
+	const DormantNodeListItem *lItem = *(reinterpret_cast<const DormantNodeListItem* const*>
+										(reinterpret_cast<const void* const*>(lValue)));
+	const DormantNodeListItem *rItem = *(reinterpret_cast<const DormantNodeListItem* const*>
+										(reinterpret_cast<const void* const*>(rValue)));
+	if (lItem->info().addon < rItem->info().addon) {
+		returnValue = -1;
+	}
+	else if (lItem->info().addon > rItem->info().addon) {
+		returnValue = 1;
 	}
 	return returnValue;
 }

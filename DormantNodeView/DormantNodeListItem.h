@@ -81,6 +81,10 @@ protected:				// *** compare functions
 							const void *lValue,
 							const void *rValue);
 
+	friend int			compareAddOnID(
+							const void *lValue,
+							const void *rValue);
+
 private:				// *** data
 
 	dormant_node_info	m_info;
