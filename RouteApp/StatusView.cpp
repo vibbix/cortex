@@ -77,12 +77,12 @@ StatusView::StatusView(
 		m_scrollBar(scrollBar),
 		m_icon(0),
 		m_opacity(1.0),
-		m_dragging(false),
-		m_manager(manager),
 		m_clock(0),
+		m_dragging(false),
 		m_backBitmap(0),
 		m_backView(0),
-		m_dirty(true) {
+		m_dirty(true),
+		m_manager(manager) {
 	D_ALLOC(("StatusView::StatusView()\n"));
 
 	SetViewColor(B_TRANSPARENT_COLOR);
@@ -488,7 +488,7 @@ void StatusView::allocBackBitmap(float width, float height) {
 	BRect b(0.0, 0.0, width, height);
 	m_backBitmap = new BBitmap(b, B_RGB32, true);
 	if(!m_backBitmap) {
-		PRINT(("StatusView::allocBackBitmap(): failed to allocate\n"));
+		D_OPERATION(("StatusView::allocBackBitmap(): failed to allocate\n"));
 		return;
 	}
 	
