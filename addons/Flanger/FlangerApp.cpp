@@ -11,6 +11,7 @@ const char* const 	g_pAppSignature = "application/x-vnd.moon-Flanger.media_addon
 int main(int argc, char** argv) {
 	if(argc < 2 || strstr(argv[1], "node=") != argv[1]) {
 		fprintf(stderr, "Sorry, not a standalone application.\n");
+		return -1;
 	}
 
 	// start node control panel
