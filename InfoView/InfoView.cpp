@@ -161,7 +161,7 @@ void InfoView::AttachedToWindow() {
 
 	float width, height;
 	GetPreferredSize(&width, &height);
-	Window()->ResizeTo(width, height);
+	Window()->ResizeTo(width + B_V_SCROLL_BAR_WIDTH, height);
 	ResizeBy(- B_V_SCROLL_BAR_WIDTH, 0.0);
 
 	// add scroll bar
@@ -180,7 +180,8 @@ void InfoView::AttachedToWindow() {
 	// set window size limits
 	float minWidth, maxWidth, minHeight, maxHeight;
 	Window()->GetSizeLimits(&minWidth, &maxWidth, &minHeight, &maxHeight);
-	Window()->SetSizeLimits(titleWidth, maxWidth, titleHeight, maxHeight);
+	Window()->SetSizeLimits(titleWidth + B_V_SCROLL_BAR_WIDTH, maxWidth,
+							titleHeight + B_H_SCROLL_BAR_HEIGHT, maxHeight);
 
 	// cache the bounds rect for proper redraw later on...
 	m_oldFrame = Bounds();
@@ -314,7 +315,7 @@ InfoView::GetPreferredSize(
 		}
 	}
 
-	*width += B_LARGE_ICON + M_H_MARGIN;
+	*width += B_LARGE_ICON + 2 * M_H_MARGIN;
 	*height += B_LARGE_ICON + 2 * M_V_MARGIN + fh.ascent + 2 * fh.leading;
 	*height += B_H_SCROLL_BAR_HEIGHT;
 }
