@@ -57,6 +57,9 @@ public:					// *** operations
 
 public:					// *** accessors
 
+	int32				countNewLines() const
+						{ return m_newLines; }
+
 	float				getHeight() const;
 
 	float				getWidth() const;
@@ -80,6 +83,8 @@ private:				// *** data members
 	BList			   *m_textLines;
 
 	InfoView		   *m_parent;
+
+	int32				m_newLines;
 };
 
 // -------------------------------------------------------- //
@@ -308,7 +313,8 @@ InfoView::GetPreferredSize(
 	be_plain_font->GetHeight(&fh);
 	for (int32 i = 0; i < m_fields->CountItems(); i++) {
 		_InfoTextField *field = static_cast<_InfoTextField *>(m_fields->ItemAt(i));
-		*height += fh.ascent + fh.descent + fh.leading + M_V_MARGIN;
+		*height += (field->countNewLines() + 1)
+				 * (fh.ascent + fh.descent + fh.leading) + M_V_MARGIN;
 		float tfw = field->getWidth();
 		if (tfw > *width) {
 			*width = tfw;
@@ -346,13 +352,20 @@ _InfoTextField::_InfoTextField(
 	: m_label(label),
 	  m_text(text),
 	  m_textLines(0),
-	  m_parent(parent) {
+	  m_parent(parent),
+	  m_newLines(0) {
 	D_ALLOC(("_InfoTextField::_InfoTextField()\n"));
 
 	if (m_label != "") {
 		m_label << ":  ";
 	}
 	m_textLines = new BList();
+
+	for (int32 i = 0; i < m_text.CountChars(); i++) {
+		if (mustEndLine(m_text.ByteAt(i))) {
+			m_newLines++;
+		}
+	}
 }
 
 _InfoTextField::~_InfoTextField() {
@@ -539,7 +552,24 @@ float
 _InfoTextField::getWidth() const {
 	D_ACCESS(("_InfoTextField::getWidth()\n"));
 
-	float width = be_plain_font->StringWidth(m_text.String());
+	BString text = m_text;
+	float width = 0.0;
+	if (m_newLines > 0) {
+		for (int32 i = 0; i < text.CountChars(); i++) {
+			if (mustEndLine(text.ByteAt(i))) {
+				BString line;
+				text.MoveInto(line, 0, i);
+				float lw = be_plain_font->StringWidth(line.String());
+				if (lw > width) {
+					width = lw;
+				}
+			}
+		}
+	}
+	else {
+		width = be_plain_font->StringWidth(m_text.String());
+	}
+
 	width += m_parent->getSideBarWidth();
 
 	return width;
