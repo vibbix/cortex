@@ -947,15 +947,27 @@ void MediaRoutingView::showContextMenu(
 }
 
 void MediaRoutingView::showErrorMessage(
-	BString message,
+	BString text,
 	status_t error)
 {
 	D_METHOD(("MediaRoutingView::showErrorMessage()\n"));
 
-	message << " (" << strerror(error) << ")";
-	BAlert *alert = new BAlert("Error", message.String(), "Ok", 0, 0,
-							   B_WIDTH_AS_USUAL, B_WARNING_ALERT);
-	alert->Go();
+	if (error) {
+		text << " (" << strerror(error) << ")";
+	}
+
+	BMessage message(M_SHOW_ERROR_MESSAGE);
+	message.AddString("text", text.String());
+	if (error) {
+		message.AddBool("error", true);
+	}
+	BMessenger messenger(0, Window());
+	if (!messenger.IsValid()
+	 || (messenger.SendMessage(&message) != B_OK)) {
+		BAlert *alert = new BAlert("Error", text.String(), "Ok", 0, 0,
+								   B_WIDTH_AS_USUAL, B_WARNING_ALERT);
+		alert->Go();
+	}
 }
 
 // -------------------------------------------------------- //
