@@ -1233,6 +1233,7 @@ status_t MediaRoutingView::_addPanelFor(
 			addItem(panel = new MediaNodePanel(m_lastDropPoint, ref));
 			selectItem(panel, true);
 			m_lastDroppedNode = 0;
+			_broadcastSelection();
 		}
 		else // this was an externally created node, must find a nice position first
 		{
