@@ -7,6 +7,7 @@
 
 #include <Autolock.h>
 #include <Message.h>
+#include <MessageFilter.h>
 #include <Region.h>
 #include <float.h>
 
@@ -30,6 +31,33 @@ const BPoint TipManager::s_defaultOffset(8.0, 8.0);
 
 const bigtime_t		TipManager::s_defIdleTime		= 750000LL;
 const bigtime_t		TipManager::s_sleepPeriod 	= 250000LL;
+
+// -------------------------------------------------------- //
+// *** message filter
+// -------------------------------------------------------- //
+
+filter_result ignore_quit_key(
+	BMessage* message,
+	BHandler** target,
+	BMessageFilter* filter)
+{
+	switch(message->what)
+	{
+		// filter command-Q
+		case B_KEY_DOWN:
+		{
+			if((modifiers() & B_COMMAND_KEY))
+			{
+				int8 key;
+				message->FindInt8("byte", &key);
+				if(key == 'q')
+					return B_SKIP_MESSAGE;
+			}
+			break;
+		}
+	}
+	return B_DISPATCH_MESSAGE;
+}
 
 // -------------------------------------------------------- //
 // *** dtor
@@ -72,9 +100,15 @@ TipManager::TipManager() :
 		BRect(-100,-100,-100,-100),
 		"TipManager",
 		B_NO_BORDER_WINDOW_LOOK,
-		B_FLOATING_ALL_WINDOW_FEEL,
+		B_NORMAL_WINDOW_FEEL,
 		B_ASYNCHRONOUS_CONTROLS | B_AVOID_FOCUS),
 	m_view(0) {
+	
+	AddCommonFilter(
+		new BMessageFilter(
+			B_PROGRAMMED_DELIVERY,
+			B_ANY_SOURCE,
+			&ignore_quit_key));
 	
 	m_view = new _TipManagerView(
 		new TipWindow(),
