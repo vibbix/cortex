@@ -306,7 +306,6 @@ void MediaRoutingView::AttachedToWindow()
 
 	// [e.moon 29nov99] moved from AllAttached()
 	cleanUp();
-
 }
 
 void MediaRoutingView::AllAttached()
@@ -314,6 +313,8 @@ void MediaRoutingView::AllAttached()
 	D_METHOD(("MediaRoutingView::AllAttached()\n"));
 	_inherited::AllAttached();
 	
+	_adjustScrollBars();
+
 	// grab keyboard events
 	MakeFocus();
 }	
@@ -868,6 +869,8 @@ void MediaRoutingView::layoutChanged(
 			panel->layoutChanged(layout);
 		}
 	}
+
+	_adjustScrollBars();
 }
 
 void MediaRoutingView::cleanUp()
@@ -1754,6 +1757,28 @@ void MediaRoutingView::_changeBackground(
 	
 	// [e.moon 1dec99] persistence, yay
 	m_backgroundBitmapEntry.Unset();
+}
+
+void
+MediaRoutingView::_adjustScrollBars()
+{
+	D_METHOD(("MediaRoutingView::_adjustScrollBars()\n"));
+
+	BScrollBar *scrollBar;
+
+	// adjust horizontal scroll bar
+	scrollBar = ScrollBar(B_HORIZONTAL);
+	if (scrollBar) {
+		float bigStep = floor(MediaNodePanel::M_DEFAULT_WIDTH + M_CLEANUP_H_GAP);
+		scrollBar->SetSteps(floor(bigStep / 10.0), bigStep);
+	}
+
+	// adjust vertical scroll bar
+	scrollBar = ScrollBar(B_VERTICAL);
+	if (scrollBar) {
+		float bigStep = floor(MediaNodePanel::M_DEFAULT_HEIGHT + M_CLEANUP_V_GAP);
+		scrollBar->SetSteps(floor(bigStep / 10.0), bigStep);
+	}
 }
 
 void 

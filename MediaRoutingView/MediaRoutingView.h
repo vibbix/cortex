@@ -314,14 +314,18 @@ private:					// *** internal methods
 	void					_changeBackground(
 								rgb_color color);
 
+	// adjust scroll bar ranges
+	void					_adjustScrollBars();
+
 	void					_broadcastSelection() const;
 	
 	// find & remove an entry in m_inactiveNodeState
-	status_t			_fetchInactiveNodeState(
+	status_t				_fetchInactiveNodeState(
 								MediaNodePanel* forPanel,
 								BMessage* outMessage);
 								
-	void          _emptyInactiveNodeState();
+	void					_emptyInactiveNodeState();
+
 private:
 
 	// the current layout
