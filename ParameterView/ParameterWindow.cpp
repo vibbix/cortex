@@ -273,16 +273,16 @@ void ParameterWindow::_updateParameterView(
 		}
 	}
 
-	// adapt the window to the new dimensions
-	ResizeTo(m_idealSize.Width(), m_idealSize.Height());
-	m_zoomed = true;
-	
 	// limit min size to avoid funny-looking scrollbars
 	float hMin = B_V_SCROLL_BAR_WIDTH*6, vMin = B_H_SCROLL_BAR_HEIGHT*6;
 	// limit max size to full extents of the parameter view
 	float hMax = m_idealSize.Width(), vMax = m_idealSize.Height();
 	SetSizeLimits(hMin, hMax, vMin, vMax);
 
+	// adapt the window to the new dimensions
+	ResizeTo(m_idealSize.Width(), m_idealSize.Height());
+	m_zoomed = true;
+	
 	if (m_parameters) {
 		BRect paramRect = m_parameters->Bounds();
 		AddChild(new ParameterContainerView(paramRect, m_parameters));
