@@ -81,7 +81,6 @@ ParameterWindowManager::ParameterWindowManager()
 	: BLooper("ParameterWindowManager",
 			  B_NORMAL_PRIORITY),
 	  m_windowList(0),
-	  m_panelList(0),
 	  m_lastWindowPosition(M_INIT_POSITION - M_DEFAULT_OFFSET) {
 	D_ALLOC(("ParameterWindowManager::ParameterWindowManager()\n"));
 
@@ -104,7 +103,6 @@ ParameterWindowManager::~ParameterWindowManager() {
 		m_windowList->RemoveItem(reinterpret_cast<void *>(entry));
 		delete entry;
 	}	
-	delete m_windowList;
 
 	while (m_panelList->CountItems() > 0) {
 		panel_map_entry *entry = static_cast<panel_map_entry *>
@@ -115,7 +113,6 @@ ParameterWindowManager::~ParameterWindowManager() {
 		m_panelList->RemoveItem(reinterpret_cast<void *>(entry));
 		delete entry;
 	}	
-	delete m_panelList;
 
 	s_instance = 0;
 }

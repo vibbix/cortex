@@ -4,7 +4,6 @@
 #include "RouteApp.h"
 #include "RouteWindow.h"
 #include "MediaRoutingView.h"
-#include "StatusView.h"
 
 #include "DormantNodeWindow.h"
 #include "TransportWindow.h"
@@ -25,7 +24,6 @@
 #include <Roster.h>
 #include <Screen.h>
 #include <ScrollView.h>
-#include <StringView.h>
 
 #include <algorithm>
 
@@ -42,7 +40,7 @@ const char* const		RouteWindow::s_windowName = "Cortex";
 const BRect RouteWindow::s_initFrame(100,100,700,550);
 
 const char* const g_aboutText =
-"Cortex/Route 2.1.3\n\n"
+"Cortex/Route 2.1.0\n\n"
 "Copyright 1999-2000 Eric Moon\n"
 "All rights reserved.\n\n"
 "The Cortex Team:\n\n"
@@ -105,7 +103,7 @@ RouteWindow::RouteWindow(RouteAppNodeManager* manager) :
 		"routingView");
 		
 	BRect hsBounds = rvBounds;
-	hsBounds.left = rvBounds.left + 199;
+	hsBounds.left--;
 	hsBounds.top = hsBounds.bottom + 1;
 	hsBounds.right++;
 	hsBounds.bottom = b.bottom + 1;
@@ -130,25 +128,7 @@ RouteWindow::RouteWindow(RouteAppNodeManager* manager) :
 		0, 0, B_VERTICAL);
 	AddChild(m_vScrollBar);
 
-	BRect svBounds = rvBounds;
-	svBounds.left -= 1;
-	svBounds.right = hsBounds.left - 1;
-	svBounds.top = svBounds.bottom + 1;
-	svBounds.bottom = b.bottom + 1;
-	
-	m_statusView = new StatusView(
-		svBounds,
-		manager,
-		m_hScrollBar);
-	AddChild(m_statusView);
-
 	AddChild(m_routingView);
-
-	float minWidth, maxWidth, minHeight, maxHeight;
-	GetSizeLimits(&minWidth, &maxWidth, &minHeight, &maxHeight);
-	minWidth = m_statusView->Frame().Width() + 6 * B_V_SCROLL_BAR_WIDTH;
-	minHeight = 6 * B_H_SCROLL_BAR_HEIGHT;
-	SetSizeLimits(minWidth, maxWidth, minHeight, maxHeight);
 
 	// construct the Window menu
 	BMenu* windowMenu = new BMenu("Window");
@@ -356,10 +336,6 @@ void RouteWindow::MessageReceived(BMessage* pMsg) {
 			_handleGroupSelected(pMsg);
 			break;
 			
-		case MediaRoutingView::M_SHOW_ERROR_MESSAGE:
-			_handleShowErrorMessage(pMsg);
-			break;
-
 		case M_TOGGLE_TRANSPORT_WINDOW:
 			_toggleTransportWindow();
 			break;
@@ -402,16 +378,6 @@ status_t RouteWindow::importState(
 		MoveTo(r.LeftTop());
 		ResizeTo(r.Width(), r.Height());
 		m_lastFramePosition = r.LeftTop();
-	}
-
-	// status view width
-	int32 i;
-	err = archive->FindInt32("statusViewWidth", &i);
-	if (err == B_OK) {
-		float diff = i - m_statusView->Bounds().IntegerWidth();
-		m_statusView->ResizeBy(diff, 0.0);
-		m_hScrollBar->ResizeBy(-diff, 0.0);
-		m_hScrollBar->MoveBy(diff, 0.0);
 	}
 
 	// settings
@@ -488,11 +454,7 @@ status_t RouteWindow::exportState(
 
 	archive->AddRect("transportFrame", r);
 	archive->AddBool("transportVisible", b);
-
-	// [c.lenz 23may00] remember status view width
-	int i = m_statusView->Bounds().IntegerWidth();
-	archive->AddInt32("statusViewWidth", i);
-
+	
 //	entry_ref saveRef;
 //	m_savePanel.GetPanelDirectory(&saveRef);
 //	BEntry saveEntry(&saveRef);
@@ -627,21 +589,6 @@ void RouteWindow::_handleGroupSelected(
 	BMessenger(m_transportWindow).SendMessage(&m);
 	
 	m_selectedGroupID = groupID;
-}
-
-void RouteWindow::_handleShowErrorMessage(
-	BMessage*										message) {
-	status_t err;
-	BString text;
-
-	err = message->FindString("text", &text);
-	if(err < B_OK) {
-		PRINT((
-			"! RouteWindow::_handleShowErrorMessage(): no text in message!\n"));
-		return;
-	}
-
-	m_statusView->setErrorMessage(text.String(), message->HasBool("error"));
 }
 
 // refresh the transport window for the given group, if any		

@@ -5,7 +5,7 @@
 #include "DormantNodeWindow.h"
 #include "DormantNodeListItem.h"
 // InfoWindow
-#include "InfoWindowManager.h"
+#include "InfoWindow.h"
 
 // Interface Kit
 #include <Deskbar.h>
@@ -106,25 +106,18 @@ void DormantNodeView::MessageReceived(
 			D_MESSAGE((" -> B_MEDIA_FLAVORS_CHANGED\n"));
 
 			// init & re-populate the list
-			int32 addOnID = 0;
-			if (message->FindInt32("be:addon_id", &addOnID) != B_OK) {
-				D_MESSAGE((" -> messages doesn't contain 'be:addon_id'!\n"));
-				return;
-			}
-			_updateList(addOnID);
+			_freeList();
+			_populateList();			
 			break;
 		}
-		case InfoWindowManager::M_INFO_WINDOW_REQUESTED: {
-			D_MESSAGE((" -> InfoWindowManager::M_INFO_WINDOW_REQUESTED)\n"));
+		case InfoView::M_INFO_WINDOW_REQUESTED: {
+			D_MESSAGE((" -> InfoView::M_INFO_WINDOW_REQUESTED)\n"));
 
 			DormantNodeListItem *item;
 			item = dynamic_cast<DormantNodeListItem *>(ItemAt(CurrentSelection()));
 			if (item) {
-				InfoWindowManager *manager = InfoWindowManager::Instance();
-				if (manager && manager->Lock()) {
-					manager->openWindowFor(item->info());
-					manager->Unlock();
-				}
+				InfoWindow *info = new InfoWindow(item->info());
+				info->Show();
 			}
 			break;
 		}
@@ -149,13 +142,13 @@ void DormantNodeView::MouseDown(
 				BRect r = item->getRealFrame(be_plain_font);
 				if (r.Contains(point)) {
 					item->showContextMenu(point, this);
-					return;
 				}
 			}
 		}
 	}
-
-	_inherited::MouseDown(point);
+	else {
+		_inherited::MouseDown(point);
+	}
 }
 
 void DormantNodeView::MouseMoved(
@@ -184,8 +177,6 @@ void DormantNodeView::MouseMoved(
 			last->mouseOver(this, point, B_EXITED_VIEW);
 		}
 	}
-	
-	_inherited::MouseMoved(point, transit, message);
 }
 
 bool DormantNodeView::InitiateDrag(
@@ -256,67 +247,6 @@ void DormantNodeView::_freeList() {
 			delete item;
 		}
 	}
-}
-
-void DormantNodeView::_updateList(
-	int32 addOnID) {
-	D_INTERNAL(("DormantNodeView::_updateList(%ld)\n", addOnID));
-
-	// init the resizable node-info buffer
-	BMediaRoster *roster = BMediaRoster::CurrentRoster();
-	const int32 bufferInc = 64;
-	int32 bufferSize = bufferInc;
-	dormant_node_info *infoBuffer = new dormant_node_info[bufferSize];
-	int32 numNodes;
-	
-	// fill the buffer
-	while (true) {
-		numNodes = bufferSize;
-		status_t error = roster->GetDormantNodes(infoBuffer, &numNodes);
-		if (error) {
-			return;
-		}
-		if (numNodes < bufferSize) {
-			break;
-		}
-			
-		// reallocate buffer & try again
-		delete [] infoBuffer;
-		bufferSize += bufferInc;
-		infoBuffer = new dormant_node_info[bufferSize];
-	}
-
-	// sort the list by add-on id to avoid multiple searches through
-	// the list
-	SortItems(compareAddOnID);
-
-	// Remove all nodes managed by this add-on
-	int32 start;
-	for (start = 0; start < CountItems(); start++) {
-		DormantNodeListItem *item = dynamic_cast<DormantNodeListItem *>(ItemAt(start));
-		if (item && (item->info().addon == addOnID)) {
-			break;
-		}
-	}
-	int32 count = 0;
-	for (int32 i = start; start < CountItems(); i++) {
-		DormantNodeListItem *item = dynamic_cast<DormantNodeListItem *>(ItemAt(i));
-		if (!item || (item->info().addon != addOnID)) {
-			break;
-		}
-		count++;
-	}
-	RemoveItems(start, count);
-
-	// add the items
-	for (int32 i = 0; i < numNodes; i++) {
-		if (infoBuffer[i].addon != addOnID) {
-			continue;
-		}
-		AddItem(new DormantNodeListItem(infoBuffer[i]));
-	}
-
-	SortItems(compareName);
 }
 
 // END -- DormantNodeView.cpp --

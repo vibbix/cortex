@@ -2,7 +2,6 @@
 
 #include "RouteAppNodeManager.h"
 
-#include "AddOnHostProtocol.h"
 #include "MediaIcon.h"
 #include "NodeGroup.h"
 #include "NodeRef.h"
@@ -16,14 +15,12 @@
 #include "MessageIO.h"
 #include "NodeSetIOContext.h"
 #include "StringContent.h"
-#include "MediaString.h"
 
-#include <Application.h>
 #include <Autolock.h>
 #include <Debug.h>
 #include <Entry.h>
 #include <Path.h>
-#include <Roster.h>
+
 #include <TimeSource.h>
 
 #include <cstring>
@@ -36,8 +33,6 @@ __USE_CORTEX_NAMESPACE
 
 #define D_METHOD(x) //PRINT (x)
 #define D_HOOK(x) //PRINT (x)
-#define D_SETTINGS(x) //PRINT (x)
-#define D_STATIC(x) //PRINT (x)
 
 // -------------------------------------------------------- //
 // *** ctor/dtor
@@ -115,58 +110,6 @@ const MediaIcon* RouteAppNodeManager::mediaIconFor(
 }
 
 // -------------------------------------------------------- //
-// *** static functions
-// -------------------------------------------------------- //
-
-bool
-RouteAppNodeManager::isAppNode(
-	NodeRef *ref,
-	app_info *outAppInfo) {
-
-	BMediaRoster *roster = BMediaRoster::CurrentRoster();
-	dormant_node_info dormantNodeInfo;
-	if  (roster->GetDormantNodeFor(ref->node(), &dormantNodeInfo) != B_OK) {
-		port_info portInfo;
-		app_info appInfo;
-		if ((get_port_info(ref->node().port, &portInfo) == B_OK)
-		 && (be_roster->GetRunningAppInfo(portInfo.team, &appInfo) == B_OK)) {
-			app_info thisAppInfo;
-			if ((be_app->GetAppInfo(&thisAppInfo) != B_OK)
-			 || ((strcmp(appInfo.signature, thisAppInfo.signature) != 0)
-			 && (strcmp(appInfo.signature, addon_host::g_appSignature) != 0))) {
-				if (outAppInfo)
-					*outAppInfo = appInfo;
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
-bool
-RouteAppNodeManager::isSystemNode(
-	NodeRef *ref) {
-	D_STATIC(("RouteAppNodeManager::isSystemNode()\n"));
-
-	port_info portInfo;
-	app_info appInfo;
-	if ((get_port_info(ref->node().port, &portInfo) == B_OK)
-	 && (be_roster->GetRunningAppInfo(portInfo.team, &appInfo) == B_OK)) {
-		 if ((strcmp(appInfo.signature,
-		 			 "application/x-vnd.Be.media-server") == 0)
-		  || (strcmp(appInfo.signature,
-		  			 "application/x-vnd.Be.addon-host") == 0)
-		  || (strcmp(appInfo.signature,
-		  			 "application/x-vnd.Be-AUSV") == 0)) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-// -------------------------------------------------------- //
 // *** error handling
 // -------------------------------------------------------- //
 
@@ -189,70 +132,36 @@ status_t RouteAppNodeManager::setLogTarget(
 void RouteAppNodeManager::nodeCreated(
 	NodeRef*											ref) {
 
-	status_t err;
-
-	// prepare the log message
-	BMessage logMsg(M_LOG);
-	BString title = "Node '";
-	title << ref->name() << "' created";
-	logMsg.AddString("title", title);
-
 	// create a default group for the node
 	// [em 8feb00]
 	NodeGroup* g = createGroup(ref->name());
 
 	if(ref->kind() & B_TIME_SOURCE) {
-		// by default, a time source node should use itself as a time reference
-		g->setTimeSource(ref->node());
-
 		// notify observers
 		BMessage m(M_TIME_SOURCE_CREATED);
 		m.AddInt32("nodeID", ref->id());
 		notify(&m);
-	
-		// start it
-		// +++++ this should be a configurable option
-		// [em 8aug00]
-		roster->StartTimeSource(ref->node(), system_time());
-		logMsg.AddString("line", "Started time source");		
 	}
-	else {
-		// adopt node's time source if it's not the system clock (the default)
-		// [em 20mar00]
-		media_node systemClock;
-		err = roster->GetSystemTimeSource(&systemClock);
-		if(err == B_OK)
+
+	// adopt node's time source if it's not the system clock (the default)
+	// [em 20mar00]
+	media_node systemClock;
+	status_t err = roster->GetSystemTimeSource(&systemClock);
+	if(err == B_OK)
+	{
+		BTimeSource* ts = roster->MakeTimeSourceFor(ref->node());
+		if(ts->Node() != systemClock)
 		{
-			BTimeSource* ts = roster->MakeTimeSourceFor(ref->node());
-			if(ts->Node() != systemClock)
-			{
-				g->setTimeSource(ts->Node());
-				logMsg.AddString("line", "Synced to System Clock");
-			}
-			ts->Release();
+			g->setTimeSource(ts->Node());
 		}
+		ts->Release();
 	}
 
 	g->addNode(ref);
-
-	if (ref->kind() & (B_PHYSICAL_INPUT | B_PHYSICAL_OUTPUT))
-	{
-		// +++++ this should be a configurable option
-		// [em 8aug00]
-		g->setGroupFlags(g->groupFlags() | NodeGroup::GROUP_LOCKED);
-	}
-
-	m_logTarget.SendMessage(&logMsg);
 }
 
 void RouteAppNodeManager::nodeDeleted(
 	const NodeRef*								ref) {
-
-	// prepare the log message
-	BMessage logMsg(M_LOG);
-	BString title = "Node '";
-	title << ref->name() << "' released";
-	logMsg.AddString("title", title);
 
 	if(ref->kind() & B_TIME_SOURCE) {
 		// notify observers
@@ -260,8 +169,6 @@ void RouteAppNodeManager::nodeDeleted(
 		m.AddInt32("nodeID", ref->id());
 		notify(&m);
 	}
-
-	m_logTarget.SendMessage(&logMsg);
 }
 
 void RouteAppNodeManager::connectionMade(
@@ -271,16 +178,7 @@ void RouteAppNodeManager::connectionMade(
 		"@ RouteAppNodeManager::connectionMade()\n"));
 		
 	status_t err;
-
-	// prepare the log message
-	BMessage logMsg(M_LOG);
-	BString title = "Connection ";
-	if (strcmp(connection->outputName(), connection->inputName()) == 0) {
-		title << "'" << connection->outputName() << "' ";
-	}
-	title << "made";
-	logMsg.AddString("title", title);
-
+	
 	if(!(connection->flags() & Connection::INTERNAL))
 		// don't react to connection Cortex didn't make
 		return;
@@ -289,7 +187,7 @@ void RouteAppNodeManager::connectionMade(
 	NodeRef *producer, *consumer;
 	err = getNodeRef(connection->sourceNode(), &producer);
 	if(err < B_OK) {
-		D_HOOK((
+		PRINT((
 			"!!! RouteAppNodeManager::connectionMade():\n"
 			"    sourceNode (%ld) not found\n",
 			connection->sourceNode()));
@@ -297,27 +195,12 @@ void RouteAppNodeManager::connectionMade(
 	}
 	err = getNodeRef(connection->destinationNode(), &consumer);
 	if(err < B_OK) {
-		D_HOOK((
+		PRINT((
 			"!!! RouteAppNodeManager::connectionMade():\n"
 			"    destinationNode (%ld) not found\n",
 			connection->destinationNode()));
 		return;	
 	}
-
-	// add node names to log messages
-	BString line = "Between:";
-	logMsg.AddString("line", line);
-	line = "    ";
-	line << producer->name() << " and ";
-	line << consumer->name();
-	logMsg.AddString("line", line);
-
-	// add format to log message
-	line = "Negotiated format:";
-	logMsg.AddString("line", line);
-	line = "    ";
-	line << MediaString::getStringFor(connection->format(), false);
-	logMsg.AddString("line", line);
 
 	NodeGroup *group = 0;
 	BString groupName = "Untitled Group ";
@@ -363,8 +246,6 @@ void RouteAppNodeManager::connectionMade(
 		group = createGroup(groupName.String());
 		group->addNode(consumer);			
 	}
-
-	m_logTarget.SendMessage(&logMsg);
 }
 
 void RouteAppNodeManager::connectionBroken(
@@ -373,15 +254,6 @@ void RouteAppNodeManager::connectionBroken(
 	D_HOOK((
 		"@ RouteAppNodeManager::connectionBroken()\n"));
 		
-	// prepare the log message
-	BMessage logMsg(M_LOG);
-	BString title = "Connection ";
-	if (strcmp(connection->outputName(), connection->inputName()) == 0) {
-		title << "'" << connection->outputName() << "' ";
-	}
-	title << "broken";
-	logMsg.AddString("title", title);
-
 	if(!(connection->flags() & Connection::INTERNAL))
 		// don't react to connection Cortex didn't make
 		return;
@@ -395,7 +267,7 @@ void RouteAppNodeManager::connectionBroken(
 	NodeRef *producer, *consumer;
 	err = getNodeRef(connection->sourceNode(), &producer);
 	if(err < B_OK) {
-		D_HOOK((
+		PRINT((
 			"!!! RouteAppNodeManager::connectionMade():\n"
 			"    sourceNode (%ld) not found\n",
 			connection->sourceNode()));
@@ -403,20 +275,12 @@ void RouteAppNodeManager::connectionBroken(
 	}
 	err = getNodeRef(connection->destinationNode(), &consumer);
 	if(err < B_OK) {
-		D_HOOK((
+		PRINT((
 			"!!! RouteAppNodeManager::connectionMade():\n"
 			"    destinationNode (%ld) not found\n",
 			connection->destinationNode()));
 		return;	
 	}
-
-	// add node names to log messages
-	BString line = "Between:";
-	logMsg.AddString("line", line);
-	line = "    ";
-	line << producer->name() << " and ";
-	line << consumer->name();
-	logMsg.AddString("line", line);
 	
 	if(
 		producer->group() &&
@@ -426,52 +290,6 @@ void RouteAppNodeManager::connectionBroken(
 		NodeGroup *newGroup;
 		splitGroup(producer, consumer, &newGroup);
 	}
-
-	m_logTarget.SendMessage(&logMsg);
-}
-
-void RouteAppNodeManager::connectionFailed(
-	const media_output &							output,
-	const media_input &								input,
-	const media_format &							format,
-	status_t										error) {
-	D_HOOK((
-		"@ RouteAppNodeManager::connectionFailed()\n"));
-
-	status_t err;
-		
-	// prepare the log message
-	BMessage logMsg(M_LOG);
-	BString title = "Connection failed";
-	logMsg.AddString("title", title);
-	logMsg.AddInt32("error", error);
-
-	NodeRef *producer, *consumer;
-	err = getNodeRef(output.node.node, &producer);
-	if(err < B_OK) {
-		return;	
-	}
-	err = getNodeRef(input.node.node, &consumer);
-	if(err < B_OK) {
-		return;	
-	}
-
-	// add node names to log messages
-	BString line = "Between:";
-	logMsg.AddString("line", line);
-	line = "    ";
-	line << producer->name() << " and " << consumer->name();
-	logMsg.AddString("line", line);
-
-	// add format to log message
-	line = "Tried format:";
-	logMsg.AddString("line", line);
-	line = "    ";
-	line << MediaString::getStringFor(format, true);
-	logMsg.AddString("line", line);
-
-	// and send it
-	m_logTarget.SendMessage(&logMsg);
 }
 
 // -------------------------------------------------------- //
@@ -496,7 +314,7 @@ void RouteAppNodeManager::xmlExportBegin(
 			NodeRef* ref;
 			err = getNodeRef(id, &ref);
 			if(err < B_OK) {
-				D_SETTINGS((
+				PRINT((
 					"! RVNM::xmlExportBegin(): node %ld doesn't exist\n", id));
 
 				set.removeNodeAt(n);
@@ -504,7 +322,7 @@ void RouteAppNodeManager::xmlExportBegin(
 			}
 			// skip unless internal
 			if(!ref->isInternal()) {
-				D_SETTINGS((
+				PRINT((
 					"! RVNM::xmlExportBegin(): node %ld not internal; skipping.\n", id));
 
 				set.removeNodeAt(n);
@@ -541,7 +359,7 @@ void RouteAppNodeManager::xmlExportContent(
 			NodeRef* ref;
 			err = getNodeRef(id, &ref);
 			if(err < B_OK) {
-				D_SETTINGS((
+				PRINT((
 					"! RouteAppNodeManager::xmlExportContent():\n"
 					"  getNodeRef(%ld) failed: '%s'\n",
 					id, strerror(err)));
@@ -552,7 +370,7 @@ void RouteAppNodeManager::xmlExportContent(
 			vector<Connection> conSet;
 			ref->getInputConnections(conSet);
 			ref->getOutputConnections(conSet);
-			for(uint32 c = 0; c < conSet.size(); ++c)
+			for(int c = 0; c < conSet.size(); ++c)
 				// non-unique connections will be rejected:
 				connections.insert(
 					connection_map::value_type(conSet[c].id(), conSet[c]));
@@ -645,7 +463,7 @@ void RouteAppNodeManager::xmlImportChild(
 			}
 		}
 		else {
-			D_SETTINGS((
+			PRINT((
 				"!!! RouteAppNodeManager::xmlImportChild():\n"
 				"    DormantNodeIO::instantiate() failed:\n"
 				"    '%s'\n",
@@ -663,7 +481,7 @@ void RouteAppNodeManager::xmlImportChild(
 			dynamic_cast<NodeSetIOContext*>(&context),
 			&con);
 		if(err < B_OK) {
-			D_SETTINGS((
+			PRINT((
 				"!!! ConnectionIO::instantiate() failed:\n"
 				"    '%s'\n", strerror(err)));
 		}

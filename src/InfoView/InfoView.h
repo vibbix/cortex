@@ -28,8 +28,17 @@
 #include "cortex_defs.h"
 __BEGIN_CORTEX_NAMESPACE
 
-class InfoView :
-	public BView {
+class InfoView : public BView
+{
+
+public:					// *** types
+
+	enum message_t {
+		
+		M_INFO_WINDOW_REQUESTED = InfoView_message_base,
+
+		M_INFO_WINDOW_CLOSED // not used yet
+	};
 
 public:					// *** constants
 
@@ -67,12 +76,6 @@ public:					// *** BView impl.
 	virtual void		FrameResized(
 							float width,
 							float height);
-
-	// returns the ideal size needed to display all text without
-	// wrapping lines
-	virtual void		GetPreferredSize(
-							float *width,
-							float *height);
 
 	// draws the title, subtitle, sidebar & icon as well as
 	// every field

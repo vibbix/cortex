@@ -33,7 +33,6 @@
 //     4) Import UI state data via import-context hook
 //
 // * HISTORY
-//	 c.lenz		28may00		Begun notification/error logging support
 //   e.moon		7dec99		Persistence support
 //   e.moon		7nov99		Begun
 
@@ -97,19 +96,6 @@ public:														// *** icon management
 		live_node_info								nodeInfo,
 		icon_size											iconSize);
 
-public:														// *** node info
-
-	// returns true if the node has not been instantiated from a dormant node
-	// and is not owned by Cortex or CortexAddOnHost
-	static bool isAppNode(
-		NodeRef *									ref,
-		app_info *									outAppInfo);
-
-	// returns true if the node is owned either by the media_server or
-	// the media_addon_server
-	static bool isSystemNode(
-		NodeRef *									ref);
-
 public:														// *** notification & error handling
 
 	status_t setNotifyTarget(
@@ -121,22 +107,16 @@ public:														// *** notification & error handling
 public:														// NodeManager hook implementations
 
 	virtual void nodeCreated(
-		NodeRef*									ref);
+		NodeRef*											ref);
 	
 	virtual void nodeDeleted(
 		const NodeRef*								ref);
 
 	virtual void connectionMade(
-		Connection*									connection);
+		Connection*										connection);
 
 	virtual void connectionBroken(
 		const Connection*							connection);
-
-	virtual void connectionFailed(
-		const media_output &						output,
-		const media_input &							input,
-		const media_format &						format,
-		status_t									error);
 
 public:														// *** IPersistent
 

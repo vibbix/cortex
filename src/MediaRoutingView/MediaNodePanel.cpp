@@ -3,7 +3,7 @@
 
 #include "MediaNodePanel.h"
 // InfoWindow
-#include "InfoWindowManager.h"
+#include "InfoWindow.h"
 // MediaRoutingView
 #include "MediaRoutingView.h"
 #include "MediaWire.h"
@@ -23,7 +23,6 @@
 #include "TipManager.h"
 
 // App Kit
-#include <Application.h>
 #include <Roster.h>
 // Interface Kit
 #include <MenuItem.h>
@@ -537,7 +536,7 @@ void MediaNodePanel::showContextMenu(
 		item->SetEnabled(false);
 	}
 
-	message = new BMessage(InfoWindowManager::M_INFO_WINDOW_REQUESTED);
+	message = new BMessage(InfoView::M_INFO_WINDOW_REQUESTED);
 	message->AddInt32("nodeID", ref->id());
 	menu->AddItem(new BMenuItem("Get Info", message, 'I'));
 	menu->AddSeparatorItem();

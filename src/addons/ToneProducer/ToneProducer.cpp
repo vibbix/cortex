@@ -780,7 +780,7 @@ ToneProducer::HandleEvent(const media_timed_event* event, bigtime_t lateness, bo
 						mTheta = 0;			// reset the generator parameters when we change waveforms
 						mWaveAscending = true;
 						mWaveLastChanged = TimeSource()->Now();
-						BroadcastNewParameterValue(mWaveLastChanged, param, &mWaveform, sizeof(mWaveform));
+						BroadcastNewParameterValue(mGainLastChanged, param, &mGain, sizeof(mGain));
 					}
 				}
 				break;

@@ -630,7 +630,8 @@ void DiagramView::updateDataRect()
 	D_METHOD(("DiagramView::updateDataRect()\n"));
 	// calculate the area in which boxes display
 	m_boxRegion.MakeEmpty();
-	for (uint32 i = 0; i < countItems(DiagramItem::M_BOX); i++)	{
+	for (int32 i = 0; i < countItems(DiagramItem::M_BOX); i++)
+	{
 		m_boxRegion.Include(itemAt(i, DiagramItem::M_BOX)->frame());
 	}
 	// adapt the data rect to the new region of boxes
@@ -697,18 +698,23 @@ void DiagramView::_trackRect(
 	rect.top = origin.y < current.y ? origin.y : current.y;
 	rect.right = origin.x < current.x ? current.x : origin.x;
 	rect.bottom = origin.y < current.y ? current.y : origin.y;
-	for (uint32 i = 0; i < countItems(DiagramItem::M_BOX); i++)	{
+	for (int32 i = 0; i < countItems(DiagramItem::M_BOX); i++)
+	{
 		DiagramBox *box = dynamic_cast<DiagramBox *>(itemAt(i, DiagramItem::M_BOX));
-		if (box) {
-			if (rect.Intersects(box->frame())) {
+		if (box)
+		{
+			if (rect.Intersects(box->frame()))
+			{
 				changed  |= selectItem(box, false);
 			}
-			else {
+			else
+			{
 				changed |= deselectItem(box);
 			}
 		}
 	}
-	if (changed) {
+	if (changed)
+	{
 		sortItems(DiagramItem::M_BOX, &compareSelectionTime);
 		selectionChanged();
 	}

@@ -540,11 +540,12 @@ bool DiagramItemGroup::selectAll(
 {
 	D_METHOD(("DiagramItemGroup::selectAll()\n"));
 	bool selectionChanged = false;
-	if (m_types & itemType) {
-		for (uint32 i = 0; i < countItems(itemType); i++) {
-			if (selectItem(itemAt(i, itemType), false)) {
+	if (m_types & itemType)
+	{
+		for (int32 i = 0; i < countItems(itemType); i++)
+		{
+			if (selectItem(itemAt(i, itemType), false))
 				selectionChanged = true;
-			}
 		}
 	}
 	return selectionChanged;
@@ -555,11 +556,12 @@ bool DiagramItemGroup::deselectAll(
 {
 	D_METHOD(("DiagramItemGroup::deselectAll()\n"));
 	bool selectionChanged = false;
-	if (m_types & itemType)	{
-		for (uint32 i = 0; i < countItems(itemType); i++) {
-			if (deselectItem(itemAt(i, itemType))) {
+	if (m_types & itemType)
+	{
+		for (int32 i = 0; i < countItems(itemType); i++)
+		{
+			if (deselectItem(itemAt(i, itemType)))
 				selectionChanged = true;
-			}
 		}
 	}
 	return selectionChanged;
@@ -572,19 +574,22 @@ void DiagramItemGroup::sortSelectedItems(
 	m_selection->SortItems(compareFunc);
 }
 
-void
-DiagramItemGroup::dragSelectionBy(
+void DiagramItemGroup::dragSelectionBy(
 	float x,
 	float y,
-	BRegion *updateRegion) {
+	BRegion *updateRegion)
+{
 	D_METHOD(("DiagramItemGroup::dragSelectionBy()\n"));
-
-	if (selectedType() == DiagramItem::M_BOX) {
+	if (selectedType() == DiagramItem::M_BOX)
+	{
 		align(&x, &y);
-		if ((x != 0) || (y != 0)) {
-			for (int32 i = countSelectedItems() - 1; i >= 0; i--) {
+		if ((x != 0) || (y != 0))
+		{
+			for (int32 i = countSelectedItems() - 1; i >= 0; i--)
+			{
 				DiagramItem *item = dynamic_cast<DiagramItem *>(selectedItemAt(i));
-				if (item->isDraggable()) {
+				if (item->isDraggable())
+				{
 					item->moveBy(x, y, updateRegion);
 				}
 			}
@@ -592,11 +597,11 @@ DiagramItemGroup::dragSelectionBy(
 	}
 }
 
-void
-DiagramItemGroup::removeSelection() {
+void DiagramItemGroup::removeSelection()
+{
 	D_METHOD(("DiagramItemGroup::removeSelection()\n"));
-
-	for (uint32 i = 0; i < countSelectedItems(); i++) {
+	for (int32 i = 0; i < countSelectedItems(); i++)
+	{
 		removeItem(selectedItemAt(i));
 	}
 }

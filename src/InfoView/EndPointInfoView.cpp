@@ -1,9 +1,6 @@
 // EndPointInfoView.cpp
 
 #include "EndPointInfoView.h"
-// InfoView
-#include "InfoWindowManager.h"
-// Support
 #include "MediaIcon.h"
 #include "MediaString.h"
 
@@ -18,10 +15,8 @@ __USE_CORTEX_NAMESPACE
 
 EndPointInfoView::EndPointInfoView(
 	const media_input &input)
-	: InfoView(input.name, "Media Input", 0),
-	  m_output(false),
-	  m_port(input.destination.port),
-	  m_id(input.destination.id) {
+	: InfoView(input.name, "Media Input", 0)
+{
 	D_METHOD(("EndPointInfoView::EndPointInfoView(input)\n"));
 
 	setSideBarWidth(be_plain_font->StringWidth(" Destination ") 
@@ -44,10 +39,8 @@ EndPointInfoView::EndPointInfoView(
 
 EndPointInfoView::EndPointInfoView(
 	const media_output &output)
-	: InfoView(output.name, "Media Output", 0),
-	  m_output(true),
-	  m_port(output.source.port),
-	  m_id(output.source.id) {
+	: InfoView(output.name, "Media Output", 0)
+{
 	D_METHOD(("EndPointInfoView::EndPointInfoView(output)\n"));
 
 	setSideBarWidth(be_plain_font->StringWidth(" Destination ") 
@@ -72,34 +65,6 @@ EndPointInfoView::~EndPointInfoView()
 {
 	D_METHOD(("EndPointInfoView::~EndPointInfoView()\n"));
 }
-
-// -------------------------------------------------------- //
-// *** BView implementation (public)
-// -------------------------------------------------------- //
-
-void EndPointInfoView::DetachedFromWindow() {
-	D_METHOD(("EndPointInfoView::DetachedFromWindow()\n"));
-
-	InfoWindowManager *manager = InfoWindowManager::Instance();
-	if (manager) {
-		if (m_output) {
-			BMessage message(InfoWindowManager::M_OUTPUT_WINDOW_CLOSED);
-			message.AddInt32("source_port", m_port);
-			message.AddInt32("source_id", m_id);
-			manager->PostMessage(&message);
-		}
-		else {
-			BMessage message(InfoWindowManager::M_INPUT_WINDOW_CLOSED);
-			message.AddInt32("destination_port", m_port);
-			message.AddInt32("destination_id", m_id);
-			manager->PostMessage(&message);
-		}
-	}
-}
-
-// -------------------------------------------------------- //
-// *** internal operations (private)
-// -------------------------------------------------------- //
 
 void EndPointInfoView::_addFormatFields(
 	const media_format &format)

@@ -233,10 +233,7 @@ void RouteApp::xmlExportContent(
 		context.beginElement(s_routeWindowElement);
 		context.beginContent();
 		BMessage m;
-		if (routeWindow->Lock()) {
-			routeWindow->exportState(&m);
-			routeWindow->Unlock();
-		}
+		routeWindow->exportState(&m);
 		MessageIO io(&m);
 		context.writeObject(&io);
 		context.endElement();
@@ -467,7 +464,7 @@ status_t RouteApp::_writeSettings() {
 
 	// write document header
 	const char* header = "<?xml version=\"1.0\"?>\n";
-	file.Write((const void*)header, strlen(header));
+	file.Write((void*)header, strlen(header));
 	
 	// write content
 	BString errorText;
@@ -609,7 +606,7 @@ status_t RouteApp::_writeSelectedNodeSet(
 
 	_RouteAppExportContext context(v);
 	
-	for(uint32 i = 0; i < v->countSelectedItems(); ++i) {
+	for(int32 i = 0; i < v->countSelectedItems(); ++i) {
 		MediaNodePanel* panel = dynamic_cast<MediaNodePanel*>(v->selectedItemAt(i));
 		if(!panel)
 			continue;
@@ -637,7 +634,7 @@ status_t RouteApp::_writeSelectedNodeSet(
 	
 	// write document header
 	const char* header = "<?xml version=\"1.0\"?>\n";
-	file.Write((const void*)header, strlen(header));
+	file.Write((void*)header, strlen(header));
 	
 	// export nodes
 	context.stream = &file;

@@ -1,139 +1,138 @@
 // InfoWindow.cpp
 
 #include "InfoWindow.h"
+// InfoWindow
+#include "AppNodeInfoView.h"
+#include "ConnectionInfoView.h"
+#include "DormantNodeInfoView.h"
+#include "EndPointInfoView.h"
+#include "FileNodeInfoView.h"
+#include "LiveNodeInfoView.h"
+// NodeManager
+#include "NodeRef.h"
 
 // Interface Kit
 #include <Screen.h>
-#include <ScrollBar.h>
-#include <View.h>
+// Media Kit
+#include <MediaRoster.h>
 
 __USE_CORTEX_NAMESPACE
 
 #include <Debug.h>
-#define D_ALLOC(x) //PRINT (x)
-#define D_HOOK(x) //PRINT (x)
-#define D_INTERNAL(x) //PRINT (x)
-#define D_MESSAGE(x) //PRINT (x)
+#define D_METHOD(x) //PRINT (x)
 
 // -------------------------------------------------------- //
-// ctor/dtor
+// *** static member init
+// -------------------------------------------------------- //
+
+const BPoint InfoWindow::M_DEFAULT_OFFSET	= BPoint(20.0, 20.0);
+const BPoint InfoWindow::M_INIT_POSITION	= BPoint(20.0, 20.0);
+
+int32 InfoWindow::s_windowCount				= 0;
+BPoint InfoWindow::s_lastWindowPosition		= M_INIT_POSITION;
+
+// -------------------------------------------------------- //
+// *** ctor/dtor (public)
 // -------------------------------------------------------- //
 
 InfoWindow::InfoWindow(
-	BRect frame)
-	: BWindow(frame, 
-			  "", B_DOCUMENT_WINDOW, 0),
-	  m_zoomed(false),
-	  m_zooming(false) {
-	D_ALLOC(("InfoWindow::InfoWindow()\n"));
+	const NodeRef *ref)
+	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_TITLED_WINDOW, 0)
+{
+	D_METHOD(("InfoWindow::InfoWindow(live_node)\n"));
 
+	BMediaRoster *roster = BMediaRoster::CurrentRoster();
+	dormant_node_info dormantNodeInfo;
+
+	if (ref->kind() & B_FILE_INTERFACE)
+	{
+		AddChild(new FileNodeInfoView(ref));
+	}
+	else if (roster
+	     && (roster->GetDormantNodeFor(ref->node(), &dormantNodeInfo) == B_OK)
+	     && (dormantNodeInfo.addon == 0))
+	{
+		AddChild(new AppNodeInfoView(ref));
+	}
+	else
+	{
+		AddChild(new LiveNodeInfoView(ref));
+	}
+	_init();
 }
 
-InfoWindow::~InfoWindow() {
-	D_ALLOC(("InfoWindow::~InfoWindow()\n"));
+InfoWindow::InfoWindow(
+	const dormant_node_info &info)
+	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_TITLED_WINDOW, 0)
+{
+	D_METHOD(("InfoWindow::InfoWindow(dormant_node)\n"));
 
+	AddChild(new DormantNodeInfoView(info));
+	_init();
+}
+
+InfoWindow::InfoWindow(
+	const Connection &connection)
+	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_TITLED_WINDOW, 0)
+{
+	D_METHOD(("InfoWindow::InfoWindow(connection)\n"));
+
+	AddChild(new ConnectionInfoView(connection));
+	_init();
+}
+
+InfoWindow::InfoWindow(
+	const media_input &input)
+	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_TITLED_WINDOW, 0)
+{
+	D_METHOD(("InfoWindow::InfoWindow(input)\n"));
+
+	AddChild(new EndPointInfoView(input));
+	_init();
+}
+
+InfoWindow::InfoWindow(
+	const media_output &output)
+	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_TITLED_WINDOW, 0)
+{
+	D_METHOD(("InfoWindow::InfoWindow(output)\n"));
+
+	AddChild(new EndPointInfoView(output));
+	_init();
+}
+
+InfoWindow::~InfoWindow()
+{
+	D_METHOD(("InfoView::~InfoView()\n"));
+
+	// decrease window count
+	s_windowCount--;
+	if (s_windowCount == 0)
+	{
+		s_lastWindowPosition = M_INIT_POSITION;
+	}
 }
 
 // -------------------------------------------------------- //
-// BWindow impl
+// *** internal operations (private)
 // -------------------------------------------------------- //
 
-void
-InfoWindow::FrameResized(
-	float width,
-	float height) {
-	D_HOOK(("InfoWindow::FrameResized()\n"));
+void InfoWindow::_init()
+{
+	D_METHOD(("InfoWindow::_init()\n"));
 
-	if (!m_zooming) {
-		m_zoomed = false;
-	}
-	else {
-		m_zooming = false;
-	}
-}
+	// increase window count
+	s_windowCount++;
 
-void
-InfoWindow::Show() {
-	D_HOOK(("InfoWindow::Show()\n"));
-
-	_constrainToScreen();
-	m_manualSize = Bounds().OffsetToCopy(0.0, 0.0);
-
-	BWindow::Show();
-}
-
-void
-InfoWindow::Zoom(
-	BPoint origin,
-	float width,
-	float height) {
-	D_HOOK(("InfoWindow::Zoom()\n"));
-
-	m_zooming = true;
-
+	// offset to a new position
 	BScreen screen(this);
-	if (!screen.Frame().Contains(Frame())) {
-		m_zoomed = false;
+	BPoint windowPosition = s_lastWindowPosition + M_DEFAULT_OFFSET;
+	if (!screen.Frame().Contains(windowPosition))
+	{
+		windowPosition = M_INIT_POSITION + BPoint(0.0, M_DEFAULT_OFFSET.y);
 	}
-
-	if (!m_zoomed) {
-		// resize to the ideal size
-		m_manualSize = Bounds();
-		float width, height;
-		FindView("InfoView")->GetPreferredSize(&width, &height);
-		width += B_V_SCROLL_BAR_WIDTH;
-		ResizeTo(width, height);
-		_constrainToScreen();
-		m_zoomed = true;
-	}
-	else {
-		// resize to the most recent manual size
-		ResizeTo(m_manualSize.Width(), m_manualSize.Height());
-		m_zoomed = false;
-	}
-}
-
-// -------------------------------------------------------- //
-// internal operations
-// -------------------------------------------------------- //
-
-void
-InfoWindow::_constrainToScreen() {
-	D_INTERNAL(("InfoWindow::_constrainToScreen()\n"));
-	
-	BScreen screen(this);
-	BRect screenRect = screen.Frame();
-	BRect windowRect = Frame();
-
-	// if the window is outside the screen rect
-	// move it to the default position
-	if (!screenRect.Intersects(windowRect)) {
-		windowRect.OffsetTo(screenRect.LeftTop());
-		MoveTo(windowRect.LeftTop());
-		windowRect = Frame();
-	}
-
-	// if the window is larger than the screen rect
-	// resize it to fit at each side
-	if (!screenRect.Contains(windowRect)) {
-		if (windowRect.left < screenRect.left) {
-			windowRect.left = screenRect.left + 5.0;
-			MoveTo(windowRect.LeftTop());
-			windowRect = Frame();
-		}
-		if (windowRect.top < screenRect.top) {
-			windowRect.top = screenRect.top + 5.0;
-			MoveTo(windowRect.LeftTop());
-			windowRect = Frame();
-		}
-		if (windowRect.right > screenRect.right) {
-			windowRect.right = screenRect.right - 5.0;
-		}
-		if (windowRect.bottom > screenRect.bottom) {
-			windowRect.bottom = screenRect.bottom - 5.0;
-		}
-		ResizeTo(windowRect.Width(), windowRect.Height());
-	}
+	MoveTo(windowPosition);
+	s_lastWindowPosition = windowPosition;
 }
 
 // END -- InfoWindow.cpp --

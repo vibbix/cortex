@@ -144,12 +144,6 @@ public:				// *** hooks
 	virtual void connectionBroken(
 		const Connection*							connection);
 
-	virtual void connectionFailed(
-		const media_output &							output,
-		const media_input &								input,
-		const media_format &							format,
-		status_t										error);
-
 public:				// *** ctor/dtor
 
 	NodeManager(

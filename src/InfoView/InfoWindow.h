@@ -1,60 +1,77 @@
 // InfoWindow.h (Cortex/InfoView)
 //
 // * PURPOSE
+//   A window that chooses the appropriate InfoView implementation
+//   by the argument passed into its constructor. It also has quite
+//	 minimalistic management for positioning new InfoWindows through
+//   the use of static members.
+//
+// * TODO
+//   It is possible to open multiple InfoWindows on the same object
+//   right now, which maybe should be avoided ?
 //
 // * HISTORY
-//   c.lenz		25may00		Begun
+//   c.lenz		5nov99		Begun
 //
 
 #ifndef __InfoWindow_H__
 #define __InfoWindow_H__
 
-// Interface Kit
+#include "InfoView.h"
+
+#include <Application.h>
 #include <Window.h>
 
 #include "cortex_defs.h"
 __BEGIN_CORTEX_NAMESPACE
 
-class InfoWindow : 
-	public		BWindow {
+class Connection;
+class NodeRef;
 
-public:						// *** ctor/dtor
+class InfoWindow : public BWindow
+{
 
-							InfoWindow(
-								BRect frame);
+public:					// *** constants
 
-	virtual					~InfoWindow();
+	static const BPoint M_DEFAULT_OFFSET;
+	static const BPoint M_INIT_POSITION;
 
-public:						// *** BWindow impl
+public:					// *** ctor/dtor
 
-	// remember that frame was changed manually
-	virtual void			FrameResized(
-								float width,
-								float height);
+	// creates a LiveNodeInfoView or a FileNodeInfoView (if the NodeRef
+	// is a B_FILE_INTERFACE)
+						InfoWindow(
+							const NodeRef *ref);
 
-	// extends BWindow implementation to constrain to screen
-	// and remember the initial size
-	virtual void			Show();
+	// creates a DormantNodeInfoView
+						InfoWindow(
+							const dormant_node_info &info);
 
-	// extend basic Zoom() functionality to 'minimize' the
-	// window when currently at max size
-	virtual void			Zoom(
-								BPoint origin,
-								float width,
-								float height);
+	// creates a ConnectionInfoView
+						InfoWindow(
+							const Connection &connection);
 
-private:					// *** internal operations
+	// create an EndPointInfoView
+						InfoWindow(
+							const media_input &input);
+						InfoWindow(
+							const media_output &output);
 
-	// resizes the window to fit in the current screen rect
-	void					_constrainToScreen();
+	virtual				~InfoWindow();
 
-private:					// *** data members
+private:				// *** internal operations
 
-	BRect					m_manualSize;
+	// is called from all ctors for window-positioning
+	void				_init();
 
-	bool					m_zoomed;
+private:				// *** static data
 
-	bool					m_zooming;
+	// number of currently open InfoWindows
+	static int32		s_windowCount;
+
+	// the BPoint at which the last InfoWindow was initially
+	// opened
+	static BPoint		s_lastWindowPosition;
 };
 
 __END_CORTEX_NAMESPACE
