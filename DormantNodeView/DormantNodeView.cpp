@@ -288,71 +288,30 @@ void DormantNodeView::_updateList(
 	// the list
 	SortItems(compareAddOnID);
 
+	// Remove all nodes managed by this add-on
 	int32 start;
-	DormantNodeListItem *first = 0;
-	// find the first item to match the id where the flavor change occurred
 	for (start = 0; start < CountItems(); start++) {
 		DormantNodeListItem *item = dynamic_cast<DormantNodeListItem *>(ItemAt(start));
 		if (item && (item->info().addon == addOnID)) {
-			D_INTERNAL((" -> START stopping at %s (%ld)\n", item->info().name, start));
-			first = item;
 			break;
 		}
 	}
-
-	// find the last item
-	int32 end;
-	DormantNodeListItem *last = 0;
-	for (end = start; end < CountItems(); end++) {
-		D_INTERNAL((" -> iterating STOP at %ld\n", end));
-		DormantNodeListItem *item = dynamic_cast<DormantNodeListItem *>(ItemAt(end));
-		if (item && (item->info().addon != addOnID)) {
-			D_INTERNAL((" -> END stopping before %s\n", item->info().name));
+	int32 count = 0;
+	for (int32 i = start; start < CountItems(); i++) {
+		DormantNodeListItem *item = dynamic_cast<DormantNodeListItem *>(ItemAt(i));
+		if (!item || (item->info().addon != addOnID)) {
 			break;
 		}
-		last = item;
+		count++;
 	}
+	RemoveItems(start, count);
 
-	// add new items
+	// add the items
 	for (int32 i = 0; i < numNodes; i++) {
 		if (infoBuffer[i].addon != addOnID) {
 			continue;
 		}
-		DormantNodeListItem *item = 0;
-		bool found = false;
-		for (int32 j = start; j < end; j++) {
-			item = dynamic_cast<DormantNodeListItem *>(ItemAt(j));
-			if (item->info().flavor_id == infoBuffer[i].flavor_id) {
-				// keep in list
-				found = true;
-				break;
-			}
-		}
-		if (!found) {
-			AddItem(new DormantNodeListItem(infoBuffer[i]));
-		}
-	}
-
-	// remove gone flavors
-	for (int32 i = start; i < end; i++) {
-		bool found = false;
-		DormantNodeListItem *item = 0;
-		item = dynamic_cast<DormantNodeListItem *>(ItemAt(i));
-		if (!item) {
-			continue;
-		}
-		for (int32 j = 0; j < numNodes; j++) {
-			if ((infoBuffer[j].addon == addOnID)
-			 && (infoBuffer[j].flavor_id == item->info().flavor_id)) {
-				// keep item in list, flavor still exists
-				found = true;
-				break;
-			}
-		}
-		if (!found) {
-			RemoveItem(item);
-			delete item;
-		}
+		AddItem(new DormantNodeListItem(infoBuffer[i]));
 	}
 
 	SortItems(compareName);
