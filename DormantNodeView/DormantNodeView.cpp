@@ -153,9 +153,8 @@ void DormantNodeView::MouseDown(
 			}
 		}
 	}
-	else {
-		_inherited::MouseDown(point);
-	}
+
+	_inherited::MouseDown(point);
 }
 
 void DormantNodeView::MouseMoved(
@@ -184,6 +183,8 @@ void DormantNodeView::MouseMoved(
 			last->mouseOver(this, point, B_EXITED_VIEW);
 		}
 	}
+	
+	_inherited::MouseMoved(point, transit, message);
 }
 
 bool DormantNodeView::InitiateDrag(
