@@ -84,46 +84,37 @@ void DiagramBox::draw(
 	BRect updateRect)
 {
 	D_DRAW(("DiagramBox::draw()\n"));
-	if (view())
-	{
+	if (view()) {
 		view()->PushState();
-		{
-			if (m_flags & M_DRAW_UNDER_ENDPOINTS)
-			{
-				BRegion region, clipping;
-				region.Include(frame());
-				if (group()->getClippingAbove(this, &clipping))
-					region.Exclude(&clipping);
-				view()->ConstrainClippingRegion(&region);
-				drawBox();
-				for (int32 i = 0; i < countItems(); i++)
-				{
-					DiagramItem *item = itemAt(i);
-					if (region.Intersects(item->frame()))
-					{
-						item->draw(item->frame());
-					}
+		if (m_flags & M_DRAW_UNDER_ENDPOINTS) {
+			BRegion region, clipping;
+			region.Include(frame());
+			if (group()->getClippingAbove(this, &clipping))
+				region.Exclude(&clipping);
+			view()->ConstrainClippingRegion(&region);
+			drawBox();
+			for (uint32 i = 0; i < countItems(); i++) {
+				DiagramItem *item = itemAt(i);
+				if (region.Intersects(item->frame())) {
+					item->draw(item->frame());
 				}
 			}
-			else
-			{
-				BRegion region, clipping;
-				region.Include(frame());
-				if (view()->getClippingAbove(this, &clipping))
-					region.Exclude(&clipping);
-				for (int32 i = 0; i < countItems(); i++)
-				{
-					DiagramItem *item = itemAt(i);
-					BRect r;
-					if (region.Intersects(r = item->frame()))
-					{
-						item->draw(r);
-						region.Exclude(r);
-					}
+		}
+		else {
+			BRegion region, clipping;
+			region.Include(frame());
+			if (view()->getClippingAbove(this, &clipping))
+				region.Exclude(&clipping);
+			for (uint32 i = 0; i < countItems(); i++) {
+				DiagramItem *item = itemAt(i);
+				BRect r;
+				if (region.Intersects(r = item->frame())) {
+					item->draw(r);
+					region.Exclude(r);
 				}
-				view()->ConstrainClippingRegion(&region);
-				drawBox();
 			}
+			view()->ConstrainClippingRegion(&region);
+			drawBox();
 		}
 		view()->PopState();
 	}
@@ -243,14 +234,14 @@ void DiagramBox::messageDragged(
 	}
 }
 
-void DiagramBox::messageDropped(
+void
+DiagramBox::messageDropped(
 	BPoint point,
-	BMessage *message)
-{
+	BMessage *message) {
 	D_METHOD(("DiagramBox::messageDropped()\n"));
+
 	DiagramItem *item = itemUnder(point);
-	if (item)
-	{
+	if (item) {
 		item->messageDropped(point, message);
 		return;
 	}
@@ -260,34 +251,28 @@ void DiagramBox::messageDropped(
 // *** operations (public)
 // -------------------------------------------------------- //
 
-void DiagramBox::moveBy(
+void
+DiagramBox::moveBy(
 	float x,
 	float y,
-	BRegion *wireRegion)
-{
+	BRegion *wireRegion) {
 	D_METHOD(("DiagramBox::moveBy()\n"));
-	if (view())
-	{
+
+	if (view()) {
 		view()->PushState();
-		{
-			for (int32 i = 0; i < countItems(); i++)
-			{
-				DiagramEndPoint *endPoint = dynamic_cast<DiagramEndPoint *>(itemAt(i));
-				if (endPoint)
-				{
-					endPoint->moveBy(x, y, wireRegion);
-				}
+		for (uint32 i = 0; i < countItems(); i++) {
+			DiagramEndPoint *endPoint = dynamic_cast<DiagramEndPoint *>(itemAt(i));
+			if (endPoint) {
+				endPoint->moveBy(x, y, wireRegion);
 			}
-			if (wireRegion)
-			{
-				wireRegion->Include(m_frame);
-				m_frame.OffsetBy(x, y);
-				wireRegion->Include(m_frame);
-			}
-			else
-			{
-				m_frame.OffsetBy(x, y);
-			}
+		}
+		if (wireRegion) {
+			wireRegion->Include(m_frame);
+			m_frame.OffsetBy(x, y);
+			wireRegion->Include(m_frame);
+		}
+		else {
+			m_frame.OffsetBy(x, y);
 		}
 		view()->PopState();
 	}
@@ -306,17 +291,16 @@ void DiagramBox::resizeBy(
 // *** internal operations (private)
 // -------------------------------------------------------- //
 
-void DiagramBox::_setOwner(
-	DiagramView *owner)
-{
+void
+DiagramBox::_setOwner(
+	DiagramView *owner) {
 	D_METHOD(("DiagramBox::_setOwner()\n"));
+
 	m_view = owner;
-	for (int32 i = 0; i < countItems(DiagramItem::M_ENDPOINT); i++)
-	{
+	for (uint32 i = 0; i < countItems(DiagramItem::M_ENDPOINT); i++) {
 		DiagramItem *item = itemAt(i);
 		item->_setOwner(m_view);
-		if (m_view)
-		{
+		if (m_view) {
 			item->attachedToDiagram();
 		}
 	}
