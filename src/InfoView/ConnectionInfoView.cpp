@@ -1,6 +1,8 @@
 // ConnectionInfoView.cpp
 
 #include "ConnectionInfoView.h"
+// InfoView
+#include "InfoWindowManager.h"
 // Support
 #include "MediaIcon.h"
 #include "MediaString.h"
@@ -22,7 +24,9 @@ __USE_CORTEX_NAMESPACE
 
 ConnectionInfoView::ConnectionInfoView(
 	const Connection &connection)
-	: InfoView("Connection", "", 0)
+	: InfoView("Connection", "", 0),
+	  m_source(connection.source()),
+	  m_destination(connection.destination())
 {
 	D_METHOD(("ConnectionInfoView::ConnectionInfoView()\n"));
 
@@ -185,6 +189,24 @@ void ConnectionInfoView::_addFormatFields(
 		default: {
 			// add no fields
 		}
+	}
+}
+
+// -------------------------------------------------------- //
+// *** BView implementation (public)
+// -------------------------------------------------------- //
+
+void ConnectionInfoView::DetachedFromWindow() {
+	D_METHOD(("ConnectionInfoView::DetachedFromWindow()\n"));
+
+	InfoWindowManager *manager = InfoWindowManager::Instance();
+	if (manager) {
+		BMessage message(InfoWindowManager::M_CONNECTION_WINDOW_CLOSED);
+		message.AddInt32("source_port", m_source.port);
+		message.AddInt32("source_id", m_source.id);
+		message.AddInt32("destination_port", m_destination.port);
+		message.AddInt32("destination_id", m_destination.id);
+		manager->PostMessage(&message);
 	}
 }
 

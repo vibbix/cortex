@@ -247,7 +247,6 @@ status_t NodeGroup::removeNode(
 		node);
 
 	// should have removed one and only one entry
-	ASSERT((itLast - m_nodes.begin()) == m_nodes.size()-1);
 	m_nodes.resize(m_nodes.size()-1);
 
 //	// 6aug99: the timesource is now the sync node...

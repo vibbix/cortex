@@ -132,7 +132,14 @@ public:					//  messages
 		// INBOUND
 		// open ParameterWindow for selected nodes
 		// [c.lenz 17feb2000]
-		M_NODE_TWEAK_PARAMETERS
+		M_NODE_TWEAK_PARAMETERS,
+
+		// INBOUND
+		// sent to the RouteWindow for displaying error
+		// messages in the status bar if available
+		// "text"	string
+		// "error"	bool	(optional)
+		M_SHOW_ERROR_MESSAGE
 	};
 
 public:						// *** members
@@ -314,14 +321,18 @@ private:					// *** internal methods
 	void					_changeBackground(
 								rgb_color color);
 
+	// adjust scroll bar ranges
+	void					_adjustScrollBars();
+
 	void					_broadcastSelection() const;
 	
 	// find & remove an entry in m_inactiveNodeState
-	status_t			_fetchInactiveNodeState(
+	status_t				_fetchInactiveNodeState(
 								MediaNodePanel* forPanel,
 								BMessage* outMessage);
 								
-	void          _emptyInactiveNodeState();
+	void					_emptyInactiveNodeState();
+
 private:
 
 	// the current layout

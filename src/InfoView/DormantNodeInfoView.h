@@ -20,8 +20,8 @@ __BEGIN_CORTEX_NAMESPACE
 
 class NodeRef;
 
-class DormantNodeInfoView : public InfoView
-{
+class DormantNodeInfoView :
+	public InfoView {
 
 public:					// *** ctor/dtor
 
@@ -31,6 +31,17 @@ public:					// *** ctor/dtor
 							const dormant_node_info &info);
 
 	virtual				~DormantNodeInfoView();
+
+public:					// *** BView impl
+
+	// notify InfoWindowManager
+	virtual void		DetachedFromWindow();
+
+private:				// *** data members
+
+	int32				m_addOnID;
+
+	int32				m_flavorID;
 };
 
 __END_CORTEX_NAMESPACE

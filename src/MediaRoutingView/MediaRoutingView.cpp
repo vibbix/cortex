@@ -10,7 +10,7 @@
 // DormantNodeView
 #include "DormantNodeView.h"
 // InfoWindow
-#include "InfoWindow.h"
+#include "InfoWindowManager.h"
 // TransportWindow
 #include "TransportWindow.h"
 // MediaRoutingView
@@ -45,7 +45,7 @@ __USE_CORTEX_NAMESPACE
 
 #include <Debug.h>
 #define D_METHOD(x) //PRINT (x)
-#define D_MESSAGE(x) PRINT (x)
+#define D_MESSAGE(x) //PRINT (x)
 #define D_MOUSE(x) //PRINT (x)
 #define D_KEY(x) //PRINT (x)
 
@@ -103,6 +103,9 @@ MediaRoutingView::~MediaRoutingView() {
 	
 	// quit ParameterWindowManager if necessary
 	ParameterWindowManager::shutDown();
+
+	// quit InfoWindowManager if necessary
+	InfoWindowManager::shutDown();
 }
 
 // -------------------------------------------------------- //
@@ -306,7 +309,6 @@ void MediaRoutingView::AttachedToWindow()
 
 	// [e.moon 29nov99] moved from AllAttached()
 	cleanUp();
-
 }
 
 void MediaRoutingView::AllAttached()
@@ -314,6 +316,8 @@ void MediaRoutingView::AllAttached()
 	D_METHOD(("MediaRoutingView::AllAttached()\n"));
 	_inherited::AllAttached();
 	
+	_adjustScrollBars();
+
 	// grab keyboard events
 	MakeFocus();
 }	
@@ -622,7 +626,7 @@ void MediaRoutingView::MessageReceived(
 			_broadcastSelection();
 			break;
 		}
-		case InfoView::M_INFO_WINDOW_REQUESTED:
+		case InfoWindowManager::M_INFO_WINDOW_REQUESTED:
 		{
 			D_MESSAGE(("MediaRoutingView::MessageReceived(InfoView::M_INFO_WINDOW_REQUESTED)\n"));
 			type_code type;
@@ -637,8 +641,11 @@ void MediaRoutingView::MessageReceived(
 					if (message->FindData("input", B_RAW_TYPE, i, &data, &dataSize) == B_OK)
 					{
 						input = *reinterpret_cast<const media_input *>(data);
-						InfoWindow *info = new InfoWindow(input);
-						info->Show();
+						InfoWindowManager *manager = InfoWindowManager::Instance();
+						if (manager && manager->Lock()) {
+							manager->openWindowFor(input);
+							manager->Unlock();
+						}
 					}
 				}
 			}
@@ -652,8 +659,11 @@ void MediaRoutingView::MessageReceived(
 					if (message->FindData("output", B_RAW_TYPE, i, &data, &dataSize) == B_OK)
 					{
 						output = *reinterpret_cast<const media_output *>(data);
-						InfoWindow *info = new InfoWindow(output);
-						info->Show();
+						InfoWindowManager *manager = InfoWindowManager::Instance();
+						if (manager && manager->Lock()) {
+							manager->openWindowFor(output);
+							manager->Unlock();
+						}
 					}
 				}
 			}
@@ -868,6 +878,8 @@ void MediaRoutingView::layoutChanged(
 			panel->layoutChanged(layout);
 		}
 	}
+
+	_adjustScrollBars();
 }
 
 void MediaRoutingView::cleanUp()
@@ -935,15 +947,27 @@ void MediaRoutingView::showContextMenu(
 }
 
 void MediaRoutingView::showErrorMessage(
-	BString message,
+	BString text,
 	status_t error)
 {
 	D_METHOD(("MediaRoutingView::showErrorMessage()\n"));
 
-	message << " (" << strerror(error) << ")";
-	BAlert *alert = new BAlert("Error", message.String(), "Ok", 0, 0,
-							   B_WIDTH_AS_USUAL, B_WARNING_ALERT);
-	alert->Go();
+	if (error) {
+		text << " (" << strerror(error) << ")";
+	}
+
+	BMessage message(M_SHOW_ERROR_MESSAGE);
+	message.AddString("text", text.String());
+	if (error) {
+		message.AddBool("error", true);
+	}
+	BMessenger messenger(0, Window());
+	if (!messenger.IsValid()
+	 || (messenger.SendMessage(&message) != B_OK)) {
+		BAlert *alert = new BAlert("Error", text.String(), "Ok", 0, 0,
+								   B_WIDTH_AS_USUAL, B_WARNING_ALERT);
+		alert->Go();
+	}
 }
 
 // -------------------------------------------------------- //
@@ -1390,7 +1414,7 @@ void MediaRoutingView::_addShortcuts()
 	Window()->AddShortcut('P', B_COMMAND_KEY | B_SHIFT_KEY,
 						  new BMessage(M_NODE_START_CONTROL_PANEL), this);
 	Window()->AddShortcut('I', B_COMMAND_KEY,
-						  new BMessage(InfoView::M_INFO_WINDOW_REQUESTED), this);
+						  new BMessage(InfoWindowManager::M_INFO_WINDOW_REQUESTED), this);
 }
 
 void MediaRoutingView::_initLayout()
@@ -1544,31 +1568,29 @@ void MediaRoutingView::_changeRunModeForSelection(
 	}
 }
 
-void MediaRoutingView::_openInfoWindowsForSelection()
-{
+void MediaRoutingView::_openInfoWindowsForSelection() {
 	D_METHOD(("MediaRoutingView::_openInfoWindowsForSelection()\n"));
 
-	if (selectedType() == DiagramItem::M_BOX)
-	{
-		for (uint32 i = 0; i < countSelectedItems(); i++)
-		{
+	InfoWindowManager *manager = InfoWindowManager::Instance();
+	if (!manager) {
+		return;
+	}
+
+	if (selectedType() == DiagramItem::M_BOX) {
+		for (uint32 i = 0; i < countSelectedItems(); i++) {
 			MediaNodePanel *panel = dynamic_cast<MediaNodePanel *>(selectedItemAt(i));
-			if (panel)
-			{
-				InfoWindow *window = new InfoWindow(panel->ref);
-				window->Show();
+			if (panel && manager->Lock()) {
+				manager->openWindowFor(panel->ref);
+				manager->Unlock();
 			}
 		}
 	}
-	else if (selectedType() == DiagramItem::M_WIRE)
-	{
-		for (uint32 i = 0; i < countSelectedItems(); i++)
-		{
+	else if (selectedType() == DiagramItem::M_WIRE) {
+		for (uint32 i = 0; i < countSelectedItems(); i++) {
 			MediaWire *wire = dynamic_cast<MediaWire *>(selectedItemAt(i));
-			if (wire)
-			{
-				InfoWindow *window = new InfoWindow(wire->connection);
-				window->Show();
+			if (wire && manager->Lock()) {
+				manager->openWindowFor(wire->connection);
+				manager->Unlock();
 			}
 		}
 	}
@@ -1658,6 +1680,10 @@ void MediaRoutingView::_checkDroppedFile(
 	BPoint dropPoint)
 {
 	D_METHOD(("MediaRoutingView::_checkDroppedFile()\n"));
+
+	// [cell 26apr00] traverse links
+	BEntry entry(ref, true);
+	entry.GetRef(ref);
 
 	BNode node(ref);
 	if (node.InitCheck() == B_OK)
@@ -1750,6 +1776,28 @@ void MediaRoutingView::_changeBackground(
 	
 	// [e.moon 1dec99] persistence, yay
 	m_backgroundBitmapEntry.Unset();
+}
+
+void
+MediaRoutingView::_adjustScrollBars()
+{
+	D_METHOD(("MediaRoutingView::_adjustScrollBars()\n"));
+
+	BScrollBar *scrollBar;
+
+	// adjust horizontal scroll bar
+	scrollBar = ScrollBar(B_HORIZONTAL);
+	if (scrollBar) {
+		float bigStep = floor(MediaNodePanel::M_DEFAULT_WIDTH + M_CLEANUP_H_GAP);
+		scrollBar->SetSteps(floor(bigStep / 10.0), bigStep);
+	}
+
+	// adjust vertical scroll bar
+	scrollBar = ScrollBar(B_VERTICAL);
+	if (scrollBar) {
+		float bigStep = floor(MediaNodePanel::M_DEFAULT_HEIGHT + M_CLEANUP_V_GAP);
+		scrollBar->SetSteps(floor(bigStep / 10.0), bigStep);
+	}
 }
 
 void 

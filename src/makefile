@@ -13,6 +13,7 @@ SRCS= \
 	RouteApp/RouteAppNodeManager.cpp \
 	RouteApp/RouteWindow.cpp \
 	RouteApp/route_app_io.cpp \
+	RouteApp/StatusView.cpp \
 	DiagramView/DiagramBox.cpp \
 	DiagramView/DiagramEndPoint.cpp \
 	DiagramView/DiagramItem.cpp \
@@ -32,7 +33,7 @@ SRCS= \
 	InfoView/EndPointInfoView.cpp \
 	InfoView/FileNodeInfoView.cpp \
 	InfoView/InfoView.cpp \
-	InfoView/InfoWindow.cpp \
+	InfoView/InfoWindowManager.cpp \
 	InfoView/LiveNodeInfoView.cpp \
 	MediaRoutingView/MediaJack.cpp \
 	MediaRoutingView/MediaNodePanel.cpp \

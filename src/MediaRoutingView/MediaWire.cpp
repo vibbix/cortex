@@ -2,7 +2,7 @@
 
 #include "MediaWire.h"
 // InfoWindow
-#include "InfoView.h"
+#include "InfoWindowManager.h"
 // MediaRoutingView
 #include "MediaJack.h"
 #include "MediaRoutingDefs.h"
@@ -288,7 +288,7 @@ void MediaWire::showContextMenu(
 	// add the "Get Info" item
 	media_output output;
 	connection.getOutput(&output);
-	BMessage *message = new BMessage(InfoView::M_INFO_WINDOW_REQUESTED);
+	BMessage *message = new BMessage(InfoWindowManager::M_INFO_WINDOW_REQUESTED);
 	message->AddData("connection", B_RAW_TYPE, 
 					 reinterpret_cast<const void *>(&output), sizeof(output));
 	menu->AddItem(item = new BMenuItem("Get Info", message, 'I'));

@@ -75,8 +75,6 @@ status_t AddOnHost::Launch(
 	// find it
 	entry_ref appRef;
 	err = be_roster->FindApp(addon_host::g_appSignature, &appRef);
-	fprintf(stderr,
-		"FindApp(%s): %s\n", addon_host::g_appSignature, strerror(err));
 	if(err < B_OK)
 		return err;
 		

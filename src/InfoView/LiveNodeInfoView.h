@@ -19,8 +19,8 @@ __BEGIN_CORTEX_NAMESPACE
 
 class NodeRef;
 
-class LiveNodeInfoView : public InfoView
-{
+class LiveNodeInfoView :
+	public InfoView {
 
 public:					// *** ctor/dtor
 
@@ -33,20 +33,12 @@ public:					// *** ctor/dtor
 
 public:					// *** BView impl
 
-	// register with the NodeRef
-	virtual void		AttachedToWindow();
-	
-	// stop observing the NodeRef
+	// notify InfoWindowManager
 	virtual void		DetachedFromWindow();
 
-	// closes the window when the node is released
-	virtual void		MessageReceived(
-							BMessage *message);
+private:				// *** data members
 
-private:
-
-	// cached pointer to the NodeRef
-	const NodeRef	   *m_ref;
+	int32				m_nodeID;
 };
 
 __END_CORTEX_NAMESPACE
