@@ -7,6 +7,7 @@
 
 // Application Kit
 #include <Message.h>
+#include <MessageRunner.h>
 // Interface Kit
 #include <Bitmap.h>
 #include <Font.h>
@@ -27,7 +28,9 @@ __USE_CORTEX_NAMESPACE
 // *** constants
 // -------------------------------------------------------- //
 
-const bigtime_t TEXT_DECAY_TIME = 20 * 1000 * 1000;
+const bigtime_t TICK_PERIOD = 50000;
+const bigtime_t TEXT_DECAY_DELAY = 10 * 1000 * 1000;
+const bigtime_t TEXT_DECAY_TIME = 3 * 1000 * 1000;
 
 // width: 8, height:12, color_space: B_CMAP8
 const unsigned char ERROR_ICON_BITS [] = {
@@ -75,11 +78,17 @@ StatusView::StatusView(
 		m_icon(0),
 		m_opacity(1.0),
 		m_dragging(false),
-		m_manager(manager) {
+		m_manager(manager),
+		m_clock(0),
+		m_backBitmap(0),
+		m_backView(0),
+		m_dirty(true) {
 	D_ALLOC(("StatusView::StatusView()\n"));
 
 	SetViewColor(B_TRANSPARENT_COLOR);
 	SetFont(be_plain_font);
+	
+	allocBackBitmap(frame.Width(), frame.Height());
 }
 
 StatusView::~StatusView() {
@@ -88,6 +97,10 @@ StatusView::~StatusView() {
 	// get the tip manager instance and reset
 	TipManager *manager = TipManager::Instance();
 	manager->removeAll(this);
+	
+	delete m_clock;
+	
+	freeBackBitmap();
 }
 
 // -------------------------------------------------------- //
@@ -99,63 +112,28 @@ void StatusView::AttachedToWindow() {
 
 	if (m_manager) {
 		m_manager->setLogTarget(BMessenger(this, Window()));
-	}	
+	}
+	
+	allocBackBitmap(Bounds().Width(), Bounds().Height());
 }
 
 void StatusView::Draw(
 	BRect updateRect) {
 	D_HOOK(("StatusView::Draw()\n"));
+	
+	if(!m_backView) {
+		drawInto(this, updateRect);
+	} else {
+		if(m_dirty) {
+			m_backBitmap->Lock();
+			drawInto(m_backView, updateRect);
+			m_backView->Sync();
+			m_backBitmap->Unlock();
+			m_dirty = false;
+		}
 
-	BRect r(Bounds());
-
-	// draw border
-	BeginLineArray(8);
-	AddLine(r.LeftTop(), r.RightTop(), M_MED_GRAY_COLOR);
-	AddLine(r.RightTop(), r.RightBottom(), M_MED_GRAY_COLOR);
-	AddLine(r.RightBottom(), r.LeftBottom(), M_MED_GRAY_COLOR);
-	AddLine(r.LeftBottom(), r.LeftTop(), M_MED_GRAY_COLOR);
-	r.InsetBy(1.0, 1.0);
-	AddLine(r.LeftTop(), r.RightTop(), M_LIGHT_GRAY_COLOR);
-	AddLine(r.RightTop(), r.RightBottom(), tint_color(M_MED_GRAY_COLOR, B_LIGHTEN_1_TINT));
-	AddLine(r.RightBottom(), r.LeftBottom(), tint_color(M_MED_GRAY_COLOR, B_LIGHTEN_1_TINT));
-	AddLine(r.LeftBottom(), r.LeftTop(), M_LIGHT_GRAY_COLOR);
-	EndLineArray();
-	r.InsetBy(1.0, 1.0);
-	SetLowColor(M_GRAY_COLOR);
-	FillRect(r, B_SOLID_LOW);
-
-	r.InsetBy(2.0, 0.0);
-	SetDrawingMode(B_OP_ALPHA);
-	SetHighColor(0, 0, 0, 255 * m_opacity);
-
-	// draw icon
-	if (m_icon) {
-		SetBlendingMode(B_CONSTANT_ALPHA, B_ALPHA_OVERLAY);
-		DrawBitmapAsync(m_icon, r.LeftTop());
-	}
-
-	// draw text
-	r.left += 12.0;
-	font_height fh;
-	be_plain_font->GetHeight(&fh);
-	r.bottom = Bounds().bottom - fh.descent - 1.0;
-	MovePenTo(r.LeftBottom());
-	DrawString(Text());
-
-	// draw resize dragger
-	SetDrawingMode(B_OP_OVER);
-	r = Bounds();
-	r.right -= 2.0;
-	r.left = r.right - 2.0;
-	r.InsetBy(0.0, 3.0);
-	r.top += 1.0;
-	for (int32 i = 0; i < r.IntegerHeight(); i += 3) {
-		BPoint p = r.LeftTop() + BPoint(0.0, i);
-		SetHighColor(M_MED_GRAY_COLOR);
-		StrokeLine(p, p, B_SOLID_HIGH);
-		p += BPoint(1.0, 1.0);
-		SetHighColor(M_WHITE_COLOR);
-		StrokeLine(p, p, B_SOLID_HIGH);
+		SetDrawingMode(B_OP_COPY);
+		DrawBitmap(m_backBitmap, updateRect, updateRect);
 	}
 }
 
@@ -163,6 +141,8 @@ void StatusView::FrameResized(
 	float width,
 	float height) {
 	D_HOOK(("StatusView::FrameResized()\n"));
+
+	allocBackBitmap(width, height);
 
 	// get the tip manager instance and reset
 	TipManager *manager = TipManager::Instance();
@@ -188,6 +168,10 @@ void StatusView::MessageReceived(
 	D_MESSAGE(("StatusView::MessageReceived()\n"));
 
 	switch (message->what) {
+		case 'Tick':
+			fadeTick();
+			break;
+			
 		case RouteAppNodeManager::M_LOG: {
 			D_MESSAGE((" -> RouteAppNodeManager::M_LOG\n"));
 
@@ -253,6 +237,7 @@ void StatusView::MouseMoved(
 		ResizeBy(x, 0.0);
 		BRect r(Bounds());
 		r.left = r.right - 10.0;
+		m_dirty = true;
 		Invalidate(r);
 		if (m_scrollBar) {
 			m_scrollBar->ResizeBy(-x, 0.0);
@@ -268,31 +253,75 @@ void StatusView::MouseUp(
 	m_dragging = false;
 }
 
-void StatusView::Pulse() {
-	D_HOOK(("StatusView::Pulse()\n"));
-
-	if (m_opacity > 0.0) {
-		float steps = static_cast<float>(TEXT_DECAY_TIME)
-					  / static_cast<float>(Window()->PulseRate());
-		m_opacity -= (1.0 / steps);
-		if (m_opacity < 0.001) {
-			m_opacity = 0.0;
-		}
-		Invalidate();
-	}
-	else if (Flags() & B_PULSE_NEEDED) {
-		// turn off pulse for this view
-		SetFlags(Flags() ^ B_PULSE_NEEDED);
-
-		// get the tip manager instance and reset
-		TipManager *manager = TipManager::Instance();
-		manager->removeAll(this);
-	}
-}
-
 // -------------------------------------------------------- //
 // *** internal operations
 // -------------------------------------------------------- //
+
+void 
+StatusView::drawInto(BView *v, BRect updateRect)
+{
+	BRect r(Bounds());
+	D_OPERATION(("StatusView::drawInto(%.1f, %.1f)\n", r.Width(), r.Height()));
+
+	// draw border (minus right edge, which the scrollbar draws)
+	v->SetDrawingMode(B_OP_COPY);
+	v->BeginLineArray(8);
+	v->AddLine(r.LeftTop(), r.RightTop(), M_MED_GRAY_COLOR);
+	BPoint rtop = r.RightTop();
+	rtop.y++;
+	v->AddLine(rtop, r.RightBottom(), tint_color(M_MED_GRAY_COLOR, B_LIGHTEN_1_TINT));
+	v->AddLine(r.RightBottom(), r.LeftBottom(), M_MED_GRAY_COLOR);
+	v->AddLine(r.LeftBottom(), r.LeftTop(), M_MED_GRAY_COLOR);
+	r.InsetBy(1.0, 1.0);
+	v->AddLine(r.LeftTop(), r.RightTop(), M_LIGHT_GRAY_COLOR);
+	rtop.y++;
+	rtop.x--;
+	v->AddLine(rtop, r.RightBottom(), M_GRAY_COLOR);
+	v->AddLine(r.RightBottom(), r.LeftBottom(), tint_color(M_MED_GRAY_COLOR, B_LIGHTEN_1_TINT));
+	v->AddLine(r.LeftBottom(), r.LeftTop(), M_LIGHT_GRAY_COLOR);
+	v->EndLineArray();
+	r.InsetBy(1.0, 1.0);
+	v->SetLowColor(M_GRAY_COLOR);
+	v->FillRect(r, B_SOLID_LOW);
+
+	r.InsetBy(2.0, 0.0);
+	v->SetDrawingMode(B_OP_ALPHA);
+	v->SetHighColor(0, 0, 0, 255 * m_opacity);
+
+	// draw icon
+	if (m_icon) {
+		v->SetBlendingMode(B_CONSTANT_ALPHA, B_ALPHA_OVERLAY);
+		BPoint p = r.LeftTop();
+		p.y--;
+		v->DrawBitmap(m_icon, p);
+	}
+
+	// draw text
+	r.left += 10.0;
+	font_height fh;
+	be_plain_font->GetHeight(&fh);
+	r.bottom = Bounds().bottom - fh.descent - 1.0;
+	v->MovePenTo(r.LeftBottom());
+	v->DrawString(Text());
+
+	// draw resize dragger
+	v->SetDrawingMode(B_OP_OVER);
+	r = Bounds();
+	r.right -= 2.0;
+	r.left = r.right - 2.0;
+	r.InsetBy(0.0, 3.0);
+	r.top += 1.0;
+	for (int32 i = 0; i < r.IntegerHeight(); i += 3) {
+		BPoint p = r.LeftTop() + BPoint(0.0, i);
+		v->SetHighColor(M_MED_GRAY_COLOR);
+		v->StrokeLine(p, p, B_SOLID_HIGH);
+		p += BPoint(1.0, 1.0);
+		v->SetHighColor(M_WHITE_COLOR);
+		v->StrokeLine(p, p, B_SOLID_HIGH);
+	}
+}
+
+
 
 void StatusView::setMessage(
 	BString &title,
@@ -348,9 +377,9 @@ void StatusView::setMessage(
 		m_icon = new BBitmap(iconRect, B_CMAP8);
 		m_icon->SetBits(INFO_ICON_BITS, 96, 0, B_CMAP8);
 	}
-	m_opacity = 1.0;
+	m_dirty = true;
+	startFade();
 	Invalidate();
-	SetFlags(Flags() | B_PULSE_NEEDED);
 }
 
 void StatusView::setErrorMessage(
@@ -393,9 +422,88 @@ void StatusView::setErrorMessage(
 		m_icon = new BBitmap(iconRect, B_CMAP8);
 		m_icon->SetBits(INFO_ICON_BITS, 96, 0, B_CMAP8);
 	}
-	m_opacity = 1.0;
+	m_dirty = true;
+	startFade();
 	Invalidate();
-	SetFlags(Flags() | B_PULSE_NEEDED);
 }
+
+void StatusView::startFade() {
+	D_OPERATION(("StatusView::startFade()\n"));
+	
+	m_opacity = 1.0;
+	m_decayDelay = TEXT_DECAY_DELAY;
+	if(!m_clock) {
+		m_clock = new BMessageRunner(
+			BMessenger(this),
+			new BMessage('Tick'),
+			TICK_PERIOD);
+	}
+}
+
+void StatusView::fadeTick() {
+	D_HOOK(("StatusView::fadeTick()\n"));
+
+	if (m_opacity > 0.0) {
+		if(m_decayDelay > 0) {
+			m_decayDelay -= TICK_PERIOD;
+			return;
+		}
+		
+		float steps = static_cast<float>(TEXT_DECAY_TIME)
+					  / static_cast<float>(TICK_PERIOD);
+		m_opacity -= (1.0 / steps);
+		if (m_opacity < 0.001) {
+			m_opacity = 0.0;
+		}
+		m_dirty = true;
+		Invalidate();
+	}
+	else if (m_clock) {
+		delete m_clock;
+		m_clock = 0;
+		
+		// get the tip manager instance and reset
+		TipManager *manager = TipManager::Instance();
+		manager->removeAll(this);
+	}
+}
+
+void StatusView::allocBackBitmap(float width, float height) {
+	D_OPERATION(("StatusView::allocBackBitmap(%.1f, %.1f)\n", width, height));
+
+	// sanity check
+	if(width <= 0.0 || height <= 0.0)
+		return;
+
+	if(m_backBitmap) {
+		// see if the bitmap needs to be expanded
+		BRect b = m_backBitmap->Bounds();
+		if(b.Width() >= width && b.Height() >= height)
+			return;
+
+		// it does; clean up:
+		freeBackBitmap();
+	}
+
+	BRect b(0.0, 0.0, width, height);
+	m_backBitmap = new BBitmap(b, B_RGB32, true);
+	if(!m_backBitmap) {
+		PRINT(("StatusView::allocBackBitmap(): failed to allocate\n"));
+		return;
+	}
+	
+	m_backView = new BView(b, 0, B_FOLLOW_NONE, B_WILL_DRAW);
+	m_backBitmap->AddChild(m_backView);
+	m_dirty = true;
+}
+
+void StatusView::freeBackBitmap() {
+	if(m_backBitmap) {
+		delete m_backBitmap;
+		m_backBitmap = 0;
+		m_backView = 0;
+	}
+}
+
 
 // END -- ParameterContainerView.cpp --

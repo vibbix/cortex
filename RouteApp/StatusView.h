@@ -25,6 +25,7 @@
 #include "cortex_defs.h"
 
 class BBitmap;
+class BMessageRunner;
 
 __BEGIN_CORTEX_NAMESPACE
 
@@ -67,9 +68,13 @@ public:					// *** BScrollView impl.
 	virtual void		MouseUp(
 							BPoint point);
 
-	virtual void		Pulse();
+//	virtual void		Pulse();
 
 public:					// *** operations
+
+	void				drawInto(
+							BView *view,
+							BRect updateRect);
 
 	void				setMessage(
 							BString &title,
@@ -79,6 +84,16 @@ public:					// *** operations
 	void				setErrorMessage(
 							BString text,
 							bool error = false);
+							
+	void				startFade();
+	
+	void				fadeTick();
+	
+	void				allocBackBitmap(
+							float width,
+							float height);
+	
+	void				freeBackBitmap();
 
 private:					// *** data members
 
@@ -90,12 +105,19 @@ private:					// *** data members
 
 	// from 0.0 to 1.0
 	float					m_opacity;
+	int32					m_decayDelay;
+	BMessageRunner *		m_clock;
 
 	// untruncated string
 	BString					m_fullText;
 
 	// is being resized
 	bool					m_dragging;
+	
+	// offscreen buffer
+	BBitmap *				m_backBitmap;
+	BView *					m_backView;
+	bool					m_dirty;
 
 	RouteAppNodeManager *	m_manager;
 };
