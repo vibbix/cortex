@@ -174,7 +174,7 @@ void StatusView::setErrorMessage(
 		}
 		BRect iconRect(0.0, 0.0, 7.0, 11.0);
 		m_icon = new BBitmap(iconRect, B_CMAP8);
-		m_icon->SetBits(INFO_ICON_BITS, 96, 0, B_CMAP8);
+		m_icon->SetBits(ERROR_ICON_BITS, 96, 0, B_CMAP8);
 	}
 	else {
 		// set icon
@@ -184,7 +184,7 @@ void StatusView::setErrorMessage(
 		}
 		BRect iconRect(0.0, 0.0, 7.0, 11.0);
 		m_icon = new BBitmap(iconRect, B_CMAP8);
-		m_icon->SetBits(ERROR_ICON_BITS, 96, 0, B_CMAP8);
+		m_icon->SetBits(INFO_ICON_BITS, 96, 0, B_CMAP8);
 	}
 	m_opacity = 1.0;
 	Invalidate();
