@@ -21,6 +21,10 @@ __BEGIN_CORTEX_NAMESPACE
 
 class AddOnHost {
 
+public:												// constants
+
+	static const char* 	ADD_ON_HOST_SIGNATURE;
+
 public:												// *** static interface
 
 	static status_t FindInstance(
