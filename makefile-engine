@@ -39,13 +39,13 @@ endif
 #	specify the tools for adding and removing resources
 	XRES		= xres
 
-# specify the binary-strip tool
-	STRIP		= strip
-
 # 	platform specific settings
 
 #	x86 Settings
 ifeq ($(CPU), x86)
+#	specify the binary-strip tool
+	STRIP		=	strip
+
 #	set the compiler and compiler flags
 	CC		=	gcc
 
@@ -279,10 +279,14 @@ else
 endif
 
 # [em 02apr00] create strip command
+ifeq ($(STRIP),)
+	DO_STRIP :=
+else
 ifeq ($(STRIP_SYMBOLS), TRUE)
 	DO_STRIP := $(STRIP) $(TARGET)
 else
 	DO_STRIP :=
+endif
 endif
 
 #	define the actual work to be done	
