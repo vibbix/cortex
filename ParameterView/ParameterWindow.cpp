@@ -1,8 +1,6 @@
 // ParameterWindow.cpp
 
 #include "ParameterWindow.h"
-// ParameterWindow
-//#include "ParameterContainerView.h"
 
 // Application Kit
 #include <Message.h>
@@ -41,10 +39,10 @@ ParameterWindow::ParameterWindow(
 	live_node_info &nodeInfo,
 	BMessenger *notifyTarget)
 	: BWindow(BRect(position, position + BPoint(50.0, 50.0)), 
-			  "parameters", B_TITLED_WINDOW,
+			  "parameters", B_DOCUMENT_WINDOW,
 			  B_WILL_ACCEPT_FIRST_CLICK | B_ASYNCHRONOUS_CONTROLS),
 	  m_node(nodeInfo.node),
-	  m_parameters(0),
+	  m_parameterView(0),
 	  m_notifyTarget(0),
 	  m_zoomed(false),
 	  m_zooming(false) {
@@ -85,8 +83,8 @@ ParameterWindow::ParameterWindow(
 	// set the min window size to the frame of the header
 	float minWidth, maxWidth, minHeight, maxHeight;
 	GetSizeLimits(&minWidth, &maxWidth, &minHeight, &maxHeight);
-	SetSizeLimits(menuBar->Bounds().Width() /*+ B_V_SCROLL_BAR_WIDTH*/, maxWidth,
-				  menuBar->Bounds().Height() /*+ 4 * B_H_SCROLL_BAR_HEIGHT*/, maxHeight);
+	SetSizeLimits(menuBar->Bounds().Width(), maxWidth,
+				  menuBar->Bounds().Height(), maxHeight);
 
 	_updateParameterView();
 	_init();
@@ -206,9 +204,16 @@ void ParameterWindow::Zoom(
 	if (!m_zoomed) {
 		// resize to the ideal size
 		m_manualSize = Bounds();
+		if ((m_manualSize.Width() < m_idealSize.Width())
+		 || (m_manualSize.Height() < m_idealSize.Height())) {
+			// fool the parameter view into thinking it was resized
+			// to a big enough frame to drop the scrollbars
+			m_parameterView->FrameResized(m_idealSize.Width() + 2 * B_V_SCROLL_BAR_WIDTH,
+									   m_idealSize.Height() + 2 * B_H_SCROLL_BAR_HEIGHT);
+		}
 		ResizeTo(m_idealSize.Width(), m_idealSize.Height());
-		_constrainToScreen();
 		m_zoomed = true;
+		_constrainToScreen();
 	}
 	else {
 		// resize to the most recent manual size
@@ -241,13 +246,10 @@ void ParameterWindow::_updateParameterView(
 	D_INTERNAL(("ParameterWindow::_updateParameterView()\n"));
 
 	// clear the old version
-	if (m_parameters) {
-//		ParameterContainerView *view = dynamic_cast<ParameterContainerView *>(FindView("ParameterContainerView"));
-		BView *view = FindView("ParameterContainerView");
-		RemoveChild(view);
-		delete m_parameters;
-		m_parameters = 0;
-		delete view;
+	if (m_parameterView) {
+		RemoveChild(m_parameterView);
+		delete m_parameterView;
+		m_parameterView = 0;
 	}
 
 	// fetch ParameterWeb from the MediaRoster
@@ -261,17 +263,15 @@ void ParameterWindow::_updateParameterView(
 				theme = BMediaTheme::PreferredTheme();
 			}
 			// acquire the view
-			m_parameters = BMediaTheme::ViewFor(web, 0, theme);
-			if (m_parameters) {
-				BMenuBar *menuBar = KeyMenuBar();
-				m_idealSize = m_parameters->Bounds();
+			m_parameterView = BMediaTheme::ViewFor(web, 0, theme);
+			if (m_parameterView) {
+				m_idealSize = m_parameterView->Bounds();
 				m_idealSize.right--;
 				m_idealSize.bottom--;
-				//m_idealSize.right += B_V_SCROLL_BAR_WIDTH;
-				//m_idealSize.bottom += B_H_SCROLL_BAR_HEIGHT;
+				BMenuBar *menuBar = KeyMenuBar();
 				if (menuBar) {
-					m_parameters->MoveTo(0.0, menuBar->Bounds().bottom + 1.0);
-					m_idealSize.bottom += menuBar->Bounds().bottom + 1.0;
+					m_parameterView->MoveTo(0.0, menuBar->Bounds().bottom + 1.0);
+					m_idealSize.bottom += menuBar->Bounds().bottom/* + 1.0*/;
 				}
 			}
 		}
@@ -281,13 +281,8 @@ void ParameterWindow::_updateParameterView(
 	ResizeTo(m_idealSize.Width(), m_idealSize.Height());
 	m_zoomed = true;
 
-	if (m_parameters) {
-//		BRect paramRect = m_parameters->Bounds();
-		BRect paramRect = Bounds();
-//		AddChild(new ParameterContainerView(paramRect, m_parameters));
-		BView* container = new BView(paramRect, "ParameterContainerView", B_FOLLOW_ALL_SIDES, B_WILL_DRAW|B_FRAME_EVENTS);
-		container->AddChild(m_parameters);
-		AddChild(container);
+	if (m_parameterView) {
+		AddChild(m_parameterView);
 	}
 }
 
