@@ -7,6 +7,7 @@
 //
 // HISTORY
 //   14may99		e.moon		Created from routeApp.cpp
+//	 21may00		c.lenz		added StatusView to the window
 
 #ifndef __ROUTEWINDOW_H__
 #define __ROUTEWINDOW_H__
@@ -23,6 +24,7 @@
 __BEGIN_CORTEX_NAMESPACE
 
 class MediaRoutingView;
+class StatusView;
 class RouteAppNodeManager;
 class DormantNodeWindow;
 class TransportWindow;
@@ -111,6 +113,10 @@ private:												// implementation
 	void _handleGroupSelected(
 		BMessage*										message);
 
+	// [c.lenz 21may00]
+	void _handleShowErrorMessage(
+		BMessage*										message);
+
 	// [e.moon 17nov99]
 	void _togglePullPalettes();
 		
@@ -136,6 +142,8 @@ private:												// members
 	BScrollBar*										m_hScrollBar;
 	BScrollBar*										m_vScrollBar;
 		
+	StatusView*										m_statusView;
+
 	BMenuItem*										m_transportWindowItem;
 	BRect													m_transportWindowFrame;
 	TransportWindow*							m_transportWindow;

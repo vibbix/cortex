@@ -4,6 +4,7 @@
 #include "RouteApp.h"
 #include "RouteWindow.h"
 #include "MediaRoutingView.h"
+#include "StatusView.h"
 
 #include "DormantNodeWindow.h"
 #include "TransportWindow.h"
@@ -24,6 +25,7 @@
 #include <Roster.h>
 #include <Screen.h>
 #include <ScrollView.h>
+#include <StringView.h>
 
 #include <algorithm>
 
@@ -102,8 +104,18 @@ RouteWindow::RouteWindow(RouteAppNodeManager* manager) :
 		rvBounds,
 		"routingView");
 		
+	BRect sbBounds = rvBounds;
+	sbBounds.left -= 1;
+	sbBounds.right = sbBounds.left + 150;
+	sbBounds.top = sbBounds.bottom + 1;
+	sbBounds.bottom = b.bottom + 1;
+	
+	m_statusView = new StatusView(
+		sbBounds);
+	AddChild(m_statusView);
+
 	BRect hsBounds = rvBounds;
-	hsBounds.left--;
+	hsBounds.left = sbBounds.right;
 	hsBounds.top = hsBounds.bottom + 1;
 	hsBounds.right++;
 	hsBounds.bottom = b.bottom + 1;
@@ -129,6 +141,12 @@ RouteWindow::RouteWindow(RouteAppNodeManager* manager) :
 	AddChild(m_vScrollBar);
 
 	AddChild(m_routingView);
+
+	float minWidth, maxWidth, minHeight, maxHeight;
+	GetSizeLimits(&minWidth, &maxWidth, &minHeight, &maxHeight);
+	minWidth = m_statusView->Frame().Width() + 6 * B_V_SCROLL_BAR_WIDTH;
+	minHeight = 6 * B_H_SCROLL_BAR_HEIGHT;
+	SetSizeLimits(minWidth, maxWidth, minHeight, maxHeight);
 
 	// construct the Window menu
 	BMenu* windowMenu = new BMenu("Window");
@@ -336,6 +354,10 @@ void RouteWindow::MessageReceived(BMessage* pMsg) {
 			_handleGroupSelected(pMsg);
 			break;
 			
+		case MediaRoutingView::M_SHOW_ERROR_MESSAGE:
+			_handleShowErrorMessage(pMsg);
+			break;
+
 		case M_TOGGLE_TRANSPORT_WINDOW:
 			_toggleTransportWindow();
 			break;
@@ -589,6 +611,21 @@ void RouteWindow::_handleGroupSelected(
 	BMessenger(m_transportWindow).SendMessage(&m);
 	
 	m_selectedGroupID = groupID;
+}
+
+void RouteWindow::_handleShowErrorMessage(
+	BMessage*										message) {
+	status_t err;
+	BString text;
+
+	err = message->FindString("text", &text);
+	if(err < B_OK) {
+		PRINT((
+			"! RouteWindow::_handleShowErrorMessage(): no text in message!\n"));
+		return;
+	}
+
+	m_statusView->setErrorMessage(text.String(), message->HasBool("error"));
 }
 
 // refresh the transport window for the given group, if any		
