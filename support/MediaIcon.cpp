@@ -2,9 +2,10 @@
 
 #include "MediaIcon.h"
 #include "MediaIconBits.h"
-#include "AddOnHost.h"
+#include "AddOnHostProtocol.h"
 
 // Application Kit
+#include <Application.h>
 #include <Roster.h>
 // Media Kit
 #include <MediaDefs.h>
@@ -144,7 +145,7 @@ void MediaIcon::_findIconFor(
 			app_info thisAppInfo;
 			if ((be_app->GetAppInfo(&thisAppInfo) != B_OK)
 			 || ((strcmp(appInfo.signature, thisAppInfo.signature) != 0)
-			 && (strcmp(appInfo.signature, AddOnHost::ADD_ON_HOST_SIGNATURE) != 0))) {
+			 && (strcmp(appInfo.signature, addon_host::g_appSignature) != 0))) {
 				// only use app icon if the node doesn't belong to our team
 				// or the addon-host
 				BNodeInfo::GetTrackerIcon(&appInfo.ref, this, m_size);

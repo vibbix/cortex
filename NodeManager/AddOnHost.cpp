@@ -23,9 +23,6 @@ __USE_CORTEX_NAMESPACE
 // constants
 // -------------------------------------------------------- //
 
-const char *AddOnHost::ADD_ON_HOST_SIGNATURE =
-	"application/x-vnd.Cortex.AddOnHost";
-
 BMessenger AddOnHost::s_messenger;
 
 // -------------------------------------------------------- //
