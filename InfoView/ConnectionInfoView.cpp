@@ -78,7 +78,8 @@ void ConnectionInfoView::_addFormatFields(
 			setSideBarWidth(be_plain_font->StringWidth(" Sample Rate ") + 2 * InfoView::M_H_MARGIN);
 			BString s;
 			// add "Format" field
-			s = MediaString::forAudioFormat(format.u.raw_audio.format, 0);
+			s = MediaString::forAudioFormat(format.u.raw_audio.format,
+											format.u.raw_audio.valid_bits);
 			addField("Format", s);
 			// add "Sample Rate" field
 			s = MediaString::forAudioFrameRate(format.u.raw_audio.frame_rate);
@@ -86,6 +87,12 @@ void ConnectionInfoView::_addFormatFields(
 			// add "Channels" field
 			s = MediaString::forAudioChannelCount(format.u.raw_audio.channel_count);
 			addField("Channels", s);
+			// add "Channel Mask" field
+			s = MediaString::forAudioChannelMask(format.u.raw_audio.channel_mask);
+			addField("Channel Mask", s);
+			// add "Matrix Mask" field
+			s = MediaString::forAudioMatrixMask(format.u.raw_audio.matrix_mask);
+			addField("Matrix Mask", s);
 			// add the "Byte Order" field
 			s = MediaString::forAudioByteOrder(format.u.raw_audio.byte_order);
 			addField("Byte Order", s);

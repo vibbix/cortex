@@ -192,11 +192,7 @@ BString	MediaString::getStringFor(
 }
 
 BString MediaString::getStringFor(
-#if B_BEOS_VERSION > B_BEOS_VERSION_4_5
 	const media_multi_audio_format &format,
-#else
-	const media_raw_audio_format &format,
-#endif
 	bool complete) {
 	D_METHOD(("MediaString::getStringFor(media_raw_audio_format)\n"));
 
@@ -211,11 +207,7 @@ BString MediaString::getStringFor(
 
 	// format
 	if (format.format != media_raw_audio_format::wildcard.format) {
-		int32 validBits = 0;
-#if B_BEOS_VERSION > B_BEOS_VERSION_4_5
-		validBits = format.valid_bits;
-#endif
-		s << (empty ? "" : ", ") << forAudioFormat(format.format, validBits);
+		s << (empty ? "" : ", ") << forAudioFormat(format.format, format.valid_bits);
 		empty = false;
 	}
 
@@ -226,6 +218,17 @@ BString MediaString::getStringFor(
 	}
 
 	if (complete) {
+		// channel mask
+		if (format.channel_mask != media_multi_audio_format::wildcard.channel_mask) {
+			s << (empty ? "" : " ") << "(" << forAudioChannelMask(format.channel_mask) << ")";
+			empty = false;
+		}
+
+		// matrix mask
+		if (format.matrix_mask != media_multi_audio_format::wildcard.matrix_mask) {
+			s << (empty ? "" : " ") << "(" << forAudioMatrixMask(format.matrix_mask) << ")";
+			empty = false;
+		}
 
 		// endianess
 		if (format.byte_order != media_raw_audio_format::wildcard.byte_order) {
@@ -504,7 +507,7 @@ BString MediaString::forAudioFormat(
 		}
 		case media_raw_audio_format::B_AUDIO_INT: {
 			BString s = "";
-			if (validBits > 0)
+			if (validBits != media_multi_audio_format::wildcard.valid_bits)
 				s << validBits << " bit ";
 			else
 				s << "32 bit ";
@@ -589,6 +592,228 @@ BString MediaString::forAudioBufferSize(
 	BString s = "";
 	s << bufferSize << " bytes per buffer";
 	return s;
+}
+
+BString MediaString::forAudioChannelMask(
+	uint32 channelMask) {
+	D_METHOD(("MediaString::forAudioChannelMask()\n"));
+
+	BString list, last;
+	bool first = true;
+
+	if (channelMask & B_CHANNEL_LEFT) {
+		if (first) {
+			list = "Left";
+			first = false;
+		}
+	}
+	if (channelMask & B_CHANNEL_RIGHT) {
+		if (first) {
+			list = "Right";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Right";
+		}
+	}
+	if (channelMask & B_CHANNEL_CENTER) {
+		if (first) {
+			list = "Center";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Center";
+		}
+	}
+	if (channelMask & B_CHANNEL_SUB) {
+		if (first) {
+			list = "Sub";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Sub";
+		}
+	}
+	if (channelMask & B_CHANNEL_REARLEFT) {
+		if (first) {
+			list = "Rear-Left";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Rear-Left";
+		}
+	}
+	if (channelMask & B_CHANNEL_REARRIGHT) {
+		if (first) {
+			list = "Rear-Right";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Rear-Right";
+		}
+	}
+	if (channelMask & B_CHANNEL_FRONT_LEFT_CENTER) {
+		if (first) {
+			list = "Front-Left-Center";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Front-Left-Center";
+		}
+	}
+	if (channelMask & B_CHANNEL_FRONT_RIGHT_CENTER) {
+		if (first) {
+			list = "Front-Right-Center";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Front-Right-Center";
+		}
+	}
+	if (channelMask & B_CHANNEL_BACK_CENTER) {
+		if (first) {
+			list = "Back-Center";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Back-Center";
+		}
+	}
+	if (channelMask & B_CHANNEL_SIDE_LEFT) {
+		if (first) {
+			list = "Side-Left";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Side-Left";
+		}
+	}
+	if (channelMask & B_CHANNEL_SIDE_RIGHT) {
+		if (first) {
+			list = "Side-Right";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Side-Right";
+		}
+	}
+	if (channelMask & B_CHANNEL_TOP_CENTER) {
+		if (first) {
+			list = "Top-Center";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Top-Center";
+		}
+	}
+	if (channelMask & B_CHANNEL_TOP_FRONT_LEFT) {
+		if (first) {
+			list = "Top-Front-Left";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Top-Front-Left";
+		}
+	}
+	if (channelMask & B_CHANNEL_TOP_FRONT_CENTER) {
+		if (first) {
+			list = "Top-Front-Center";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Top-Front-Center";
+		}
+	}
+	if (channelMask & B_CHANNEL_TOP_FRONT_RIGHT) {
+		if (first) {
+			list = "Top-Front-Right";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Top-Front-Right";
+		}
+	}
+	if (channelMask & B_CHANNEL_TOP_BACK_LEFT) {
+		if (first) {
+			list = "Top-Back-Left";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Top-Back-Left";
+		}
+	}
+	if (channelMask & B_CHANNEL_TOP_BACK_CENTER) {
+		if (first) {
+			list = "Top-Back-Center";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Top-Back-Center";
+		}
+	}
+	if (channelMask & B_CHANNEL_TOP_BACK_RIGHT) {
+		if (first) {
+			list = "Top-Back-Right";
+			first = false;
+		}
+		else {
+			if (last != "")
+				list << ", " << last;
+			last = "Top-Back-Right";
+		}
+	}
+	if (last != "") {
+		list << " & " << last;
+	}
+	if (list == "") {
+		list = "(none)";
+	}
+
+	return list;
+}
+
+BString MediaString::forAudioMatrixMask(
+	uint16 matrixMask) {
+	D_METHOD(("MediaString::forAudioMatrixMask()\n"));
+
+	switch (matrixMask) {
+		case 0:									return "(none)";
+		case B_MATRIX_PROLOGIC_LR:				return "ProLogic LR";
+		case B_MATRIX_AMBISONIC_WXYZ:			return "Ambisonic WXYZ";
+		default:								return "(unknown matrix mask)";
+	}
 }
 
 // -------------------------------------------------------- //

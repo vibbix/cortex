@@ -50,11 +50,7 @@ public:						// media_format strings
 								media_type type,
 								bool complete = true);
 	static BString			getStringFor(
-#if B_BEOS_VERSION > B_BEOS_VERSION_4_5
 								const media_multi_audio_format &format,
-#else
-								const media_raw_audio_format &format,
-#endif
 								bool complete = true);
 	static BString			getStringFor(
 								const media_raw_video_format &format,
@@ -91,6 +87,10 @@ public:						// strings for single fields in media_raw_audio_format
 								uint32 byteOrder);
 	static BString			forAudioBufferSize(
 								size_t bufferSize);
+	static BString			forAudioChannelMask(
+								uint32 channelMask);
+	static BString			forAudioMatrixMask(
+								uint16 matrixMask);
 
 public:						// strings for single fields in media_encoded_audio_format
 
