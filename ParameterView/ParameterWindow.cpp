@@ -81,12 +81,6 @@ ParameterWindow::ParameterWindow(
 	menuBar->AddItem(menu);
 	AddChild(menuBar);
 
-	// set the min window size to the frame of the header
-	float minWidth, maxWidth, minHeight, maxHeight;
-	GetSizeLimits(&minWidth, &maxWidth, &minHeight, &maxHeight);
-	SetSizeLimits(menuBar->Bounds().Width() + B_V_SCROLL_BAR_WIDTH, maxWidth,
-				  menuBar->Bounds().Height() + 4 * B_H_SCROLL_BAR_HEIGHT, maxHeight);
-
 	_updateParameterView();
 	_init();
 
@@ -274,7 +268,7 @@ void ParameterWindow::_updateParameterView(
 	}
 
 	// limit min size to avoid funny-looking scrollbars
-	float hMin = B_V_SCROLL_BAR_WIDTH*6, vMin = B_H_SCROLL_BAR_HEIGHT*6;
+	float hMin = B_V_SCROLL_BAR_WIDTH*6, vMin = B_H_SCROLL_BAR_HEIGHT*3;
 	// limit max size to full extents of the parameter view
 	float hMax = m_idealSize.Width(), vMax = m_idealSize.Height();
 	SetSizeLimits(hMin, hMax, vMin, vMax);
