@@ -100,7 +100,7 @@ TipManager::TipManager() :
 		BRect(-100,-100,-100,-100),
 		"TipManager",
 		B_NO_BORDER_WINDOW_LOOK,
-		B_NORMAL_WINDOW_FEEL,
+		B_FLOATING_ALL_WINDOW_FEEL,
 		B_ASYNCHRONOUS_CONTROLS | B_AVOID_FOCUS),
 	m_view(0) {
 	

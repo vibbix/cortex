@@ -25,8 +25,11 @@
 #include "cortex_defs.h"
 
 class BBitmap;
+class BMessageRunner;
 
 __BEGIN_CORTEX_NAMESPACE
+
+class RouteAppNodeManager;
 
 class StatusView :
 	public BStringView {
@@ -35,11 +38,14 @@ public:					// *** ctor/dtor
 
 						StatusView(
 							BRect frame,
+							RouteAppNodeManager *manager,
 							BScrollBar *scrollBar = 0);
 
 	virtual				~StatusView();
 
 public:					// *** BScrollView impl.
+
+	virtual void		AttachedToWindow();
 
 	virtual void		Draw(
 							BRect updateRect);
@@ -47,6 +53,9 @@ public:					// *** BScrollView impl.
 	virtual void		FrameResized(
 							float width,
 							float height);
+
+	virtual void		MessageReceived(
+							BMessage *message);
 
 	virtual void		MouseDown(
 							BPoint point);
@@ -59,30 +68,58 @@ public:					// *** BScrollView impl.
 	virtual void		MouseUp(
 							BPoint point);
 
-	virtual void		Pulse();
+//	virtual void		Pulse();
 
 public:					// *** operations
+
+	void				drawInto(
+							BView *view,
+							BRect updateRect);
+
+	void				setMessage(
+							BString &title,
+							BString &details,
+							status_t error = B_OK);
 
 	void				setErrorMessage(
 							BString text,
 							bool error = false);
+							
+	void				startFade();
+	
+	void				fadeTick();
+	
+	void				allocBackBitmap(
+							float width,
+							float height);
+	
+	void				freeBackBitmap();
 
-private:				// *** data members
+private:					// *** data members
 
 	// the sibling scrollbar which should be resized by the 
 	// status view
-	BScrollBar		   *m_scrollBar;
+	BScrollBar *			m_scrollBar;
 
-	BBitmap			   *m_icon;
+	BBitmap	*				m_icon;
 
 	// from 0.0 to 1.0
-	float				m_opacity;
+	float					m_opacity;
+	int32					m_decayDelay;
+	BMessageRunner *		m_clock;
 
 	// untruncated string
-	BString				m_fullText;
+	BString					m_fullText;
 
 	// is being resized
-	bool				m_dragging;
+	bool					m_dragging;
+	
+	// offscreen buffer
+	BBitmap *				m_backBitmap;
+	BView *					m_backView;
+	bool					m_dirty;
+
+	RouteAppNodeManager *	m_manager;
 };
 
 __END_CORTEX_NAMESPACE

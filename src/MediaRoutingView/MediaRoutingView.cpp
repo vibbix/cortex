@@ -165,11 +165,11 @@ DiagramWire *MediaRoutingView::createWire(
 			status_t error;
 			Connection connection;
 			error = manager->connect(output, input, &connection);
-			if (error)
+/*			if (error)
 			{
 				showErrorMessage("Could not connect", error);
 			}
-		}
+*/		}
 	}
 	return 0;
 }

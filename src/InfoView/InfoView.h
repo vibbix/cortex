@@ -68,6 +68,12 @@ public:					// *** BView impl.
 							float width,
 							float height);
 
+	// returns the ideal size needed to display all text without
+	// wrapping lines
+	virtual void		GetPreferredSize(
+							float *width,
+							float *height);
+
 	// draws the title, subtitle, sidebar & icon as well as
 	// every field
 	virtual void		Draw(

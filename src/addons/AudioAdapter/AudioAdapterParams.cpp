@@ -131,7 +131,7 @@ void _AudioAdapterParams::populateGroup(
 		8,
 		"8");
 
-	BParameterGroup* outputGroup = group->MakeGroup("Input Format");
+	BParameterGroup* outputGroup = group->MakeGroup("Output Format");
 
 	groupName = outputGroup->MakeNullParameter(
 		0, B_MEDIA_NO_TYPE, "Output Format", B_GENERIC);

@@ -8,6 +8,7 @@
 #include "EndPointInfoView.h"
 #include "FileNodeInfoView.h"
 #include "LiveNodeInfoView.h"
+#include "InfoWindow.h"
 // NodeManager
 #include "AddOnHostProtocol.h"
 #include "Connection.h"
@@ -17,8 +18,6 @@
 #include <Application.h>
 #include <AppDefs.h>
 #include <Roster.h>
-// Interface Kit
-#include <Window.h>
 // Media Kit
 #include <MediaAddOn.h>
 #include <MediaRoster.h>
@@ -313,7 +312,7 @@ status_t InfoWindowManager::openWindowFor(
 	BRect frame = InfoView::M_DEFAULT_FRAME;
 	frame.OffsetTo(m_nextWindowPosition);
 	m_nextWindowPosition += M_DEFAULT_OFFSET;
-	window = new BWindow(frame, "", B_DOCUMENT_WINDOW, 0);
+	window = new InfoWindow(frame);
 
 	if (_addWindowFor(ref, window)) {
 		// find the correct InfoView sub-class
@@ -375,7 +374,7 @@ status_t InfoWindowManager::openWindowFor(
 	BRect frame = InfoView::M_DEFAULT_FRAME;
 	frame.OffsetTo(m_nextWindowPosition);
 	m_nextWindowPosition += M_DEFAULT_OFFSET;
-	window = new BWindow(frame, "", B_DOCUMENT_WINDOW, 0);
+	window = new InfoWindow(frame);
 
 	if (_addWindowFor(info, window)) {
 		window->AddChild(new DormantNodeInfoView(info));
@@ -408,7 +407,7 @@ status_t InfoWindowManager::openWindowFor(
 	BRect frame = InfoView::M_DEFAULT_FRAME;
 	frame.OffsetTo(m_nextWindowPosition);
 	m_nextWindowPosition += M_DEFAULT_OFFSET;
-	window = new BWindow(frame, "", B_DOCUMENT_WINDOW, 0);
+	window = new InfoWindow(frame);
 
 	if (_addWindowFor(connection, window)) {
 		window->AddChild(new ConnectionInfoView(connection));
@@ -441,7 +440,7 @@ status_t InfoWindowManager::openWindowFor(
 	BRect frame = InfoView::M_DEFAULT_FRAME;
 	frame.OffsetTo(m_nextWindowPosition);
 	m_nextWindowPosition += M_DEFAULT_OFFSET;
-	window = new BWindow(frame, "", B_DOCUMENT_WINDOW, 0);
+	window = new InfoWindow(frame);
 
 	if (_addWindowFor(input, window)) {
 		window->AddChild(new EndPointInfoView(input));

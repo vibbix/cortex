@@ -33,6 +33,7 @@
 //     4) Import UI state data via import-context hook
 //
 // * HISTORY
+//	 c.lenz		28may00		Begun notification/error logging support
 //   e.moon		7dec99		Persistence support
 //   e.moon		7nov99		Begun
 
@@ -107,16 +108,22 @@ public:														// *** notification & error handling
 public:														// NodeManager hook implementations
 
 	virtual void nodeCreated(
-		NodeRef*											ref);
+		NodeRef*									ref);
 	
 	virtual void nodeDeleted(
 		const NodeRef*								ref);
 
 	virtual void connectionMade(
-		Connection*										connection);
+		Connection*									connection);
 
 	virtual void connectionBroken(
 		const Connection*							connection);
+
+	virtual void connectionFailed(
+		const media_output &						output,
+		const media_input &							input,
+		const media_format &						format,
+		status_t									error);
 
 public:														// *** IPersistent
 
