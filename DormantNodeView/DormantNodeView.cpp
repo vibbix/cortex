@@ -5,7 +5,7 @@
 #include "DormantNodeWindow.h"
 #include "DormantNodeListItem.h"
 // InfoWindow
-#include "InfoWindow.h"
+#include "InfoWindowManager.h"
 
 // Interface Kit
 #include <Deskbar.h>
@@ -114,14 +114,17 @@ void DormantNodeView::MessageReceived(
 			_updateList(addOnID);
 			break;
 		}
-		case InfoView::M_INFO_WINDOW_REQUESTED: {
-			D_MESSAGE((" -> InfoView::M_INFO_WINDOW_REQUESTED)\n"));
+		case InfoWindowManager::M_INFO_WINDOW_REQUESTED: {
+			D_MESSAGE((" -> InfoWindowManager::M_INFO_WINDOW_REQUESTED)\n"));
 
 			DormantNodeListItem *item;
 			item = dynamic_cast<DormantNodeListItem *>(ItemAt(CurrentSelection()));
 			if (item) {
-				InfoWindow *info = new InfoWindow(item->info());
-				info->Show();
+				InfoWindowManager *manager = InfoWindowManager::Instance();
+				if (manager && manager->Lock()) {
+					manager->openWindowFor(item->info());
+					manager->Unlock();
+				}
 			}
 			break;
 		}

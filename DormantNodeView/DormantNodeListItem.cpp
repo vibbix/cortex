@@ -2,7 +2,7 @@
 
 #include "DormantNodeListItem.h"
 // InfoWindow
-#include "InfoView.h"
+#include "InfoWindowManager.h"
 // Support
 #include "MediaIcon.h"
 // TipManager
@@ -235,7 +235,7 @@ void DormantNodeListItem::showContextMenu(
 	menu->SetFont(be_plain_font);
 	
 	// Add the "Get Info" item
-	BMessage *message = new BMessage(InfoView::M_INFO_WINDOW_REQUESTED);
+	BMessage *message = new BMessage(InfoWindowManager::M_INFO_WINDOW_REQUESTED);
 	menu->AddItem(new BMenuItem("Get Info", message));
 
 	menu->SetTargetForItems(owner);
