@@ -119,11 +119,6 @@ public:												// BView
 		nodeCount << ((nodeCount == "1") ? " node." : " nodes.");
 		// +++++ constrain width
 		DrawString(nodeCount.String(), m_nodeCountPosition);
-		
-		// status
-		BString status = "No errors.";
-		// +++++ constrain width
-		DrawString(status.String(), m_statusPosition);
 	}
 	
 	virtual void MouseDown(
@@ -176,16 +171,13 @@ public:												// implementation
 		
 		float realWidth = b.Width() - (_edge_pad_x * 2);
 
-		m_maxNameWidth = realWidth * 0.7;
-		m_maxNodeCountWidth = realWidth - m_maxNameWidth;
 		m_namePosition.x = _edge_pad_x;
 		m_namePosition.y = _edge_pad_x + fh.ascent - 2.0;
-		m_nodeCountPosition = m_namePosition;
-		m_nodeCountPosition.x = m_maxNameWidth;
-		
-		m_maxStatusWidth = realWidth;
-		m_statusPosition.x = _edge_pad_x;
-		m_statusPosition.y = b.Height() - (fh.descent + fh.leading + _edge_pad_y);
+		m_maxNameWidth = realWidth * 0.7;
+	
+		m_nodeCountPosition.x = _edge_pad_x;
+		m_nodeCountPosition.y = b.Height() - (fh.descent + fh.leading + _edge_pad_y);
+		m_maxNodeCountWidth = realWidth - m_maxNameWidth;
 	}
 
 private:
@@ -199,9 +191,6 @@ private:
 	
 	BPoint											m_nodeCountPosition;
 	float												m_maxNodeCountWidth;
-	
-	BPoint											m_statusPosition;
-	float												m_maxStatusWidth;
 };
 __END_CORTEX_NAMESPACE
 
