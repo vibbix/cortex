@@ -106,8 +106,12 @@ void DormantNodeView::MessageReceived(
 			D_MESSAGE((" -> B_MEDIA_FLAVORS_CHANGED\n"));
 
 			// init & re-populate the list
-			_freeList();
-			_populateList();			
+			int32 addOnID = 0;
+			if (message->FindInt32("be:addon_id", &addOnID) != B_OK) {
+				D_MESSAGE((" -> messages doesn't contain 'be:addon_id'!\n"));
+				return;
+			}
+			_updateList(addOnID);
 			break;
 		}
 		case InfoView::M_INFO_WINDOW_REQUESTED: {
@@ -247,6 +251,108 @@ void DormantNodeView::_freeList() {
 			delete item;
 		}
 	}
+}
+
+void DormantNodeView::_updateList(
+	int32 addOnID) {
+	D_INTERNAL(("DormantNodeView::_updateList(%ld)\n", addOnID));
+
+	// init the resizable node-info buffer
+	BMediaRoster *roster = BMediaRoster::CurrentRoster();
+	const int32 bufferInc = 64;
+	int32 bufferSize = bufferInc;
+	dormant_node_info *infoBuffer = new dormant_node_info[bufferSize];
+	int32 numNodes;
+	
+	// fill the buffer
+	while (true) {
+		numNodes = bufferSize;
+		status_t error = roster->GetDormantNodes(infoBuffer, &numNodes);
+		if (error) {
+			return;
+		}
+		if (numNodes < bufferSize) {
+			break;
+		}
+			
+		// reallocate buffer & try again
+		delete [] infoBuffer;
+		bufferSize += bufferInc;
+		infoBuffer = new dormant_node_info[bufferSize];
+	}
+
+	// sort the list by add-on id to avoid multiple searches through
+	// the list
+	SortItems(compareAddOnID);
+
+	int32 start;
+	DormantNodeListItem *first = 0;
+	// find the first item to match the id where the flavor change occurred
+	for (start = 0; start < CountItems(); start++) {
+		DormantNodeListItem *item = dynamic_cast<DormantNodeListItem *>(ItemAt(start));
+		if (item && (item->info().addon == addOnID)) {
+			D_INTERNAL((" -> START stopping at %s (%ld)\n", item->info().name, start));
+			first = item;
+			break;
+		}
+	}
+
+	// find the last item
+	int32 end;
+	DormantNodeListItem *last = 0;
+	for (end = start; end < CountItems(); end++) {
+		D_INTERNAL((" -> iterating STOP at %ld\n", end));
+		DormantNodeListItem *item = dynamic_cast<DormantNodeListItem *>(ItemAt(end));
+		if (item && (item->info().addon != addOnID)) {
+			D_INTERNAL((" -> END stopping before %s\n", item->info().name));
+			break;
+		}
+		last = item;
+	}
+
+	// add new items
+	for (int32 i = 0; i < numNodes; i++) {
+		if (infoBuffer[i].addon != addOnID) {
+			continue;
+		}
+		DormantNodeListItem *item = 0;
+		bool found = false;
+		for (int32 j = start; j < end; j++) {
+			item = dynamic_cast<DormantNodeListItem *>(ItemAt(j));
+			if (item->info().flavor_id == infoBuffer[i].flavor_id) {
+				// keep in list
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			AddItem(new DormantNodeListItem(infoBuffer[i]));
+		}
+	}
+
+	// remove gone flavors
+	for (int32 i = start; i < end; i++) {
+		bool found = false;
+		DormantNodeListItem *item = 0;
+		item = dynamic_cast<DormantNodeListItem *>(ItemAt(i));
+		if (!item) {
+			continue;
+		}
+		for (int32 j = 0; j < numNodes; j++) {
+			if ((infoBuffer[j].addon == addOnID)
+			 && (infoBuffer[j].flavor_id == item->info().flavor_id)) {
+				// keep item in list, flavor still exists
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			RemoveItem(item);
+			delete item;
+		}
+	}
+
+	SortItems(compareName);
 }
 
 // END -- DormantNodeView.cpp --

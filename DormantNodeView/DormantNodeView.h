@@ -71,6 +71,9 @@ private:				// *** internal operations
 
 	void				_freeList();
 
+	void				_updateList(
+							int32 addOnID);
+
 private:				// *** data
 
 	BListItem		   *m_lastItemUnder;
