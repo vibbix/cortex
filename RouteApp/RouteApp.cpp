@@ -233,7 +233,10 @@ void RouteApp::xmlExportContent(
 		context.beginElement(s_routeWindowElement);
 		context.beginContent();
 		BMessage m;
-		routeWindow->exportState(&m);
+		if (routeWindow->Lock()) {
+			routeWindow->exportState(&m);
+			routeWindow->Unlock();
+		}
 		MessageIO io(&m);
 		context.writeObject(&io);
 		context.endElement();

@@ -104,18 +104,8 @@ RouteWindow::RouteWindow(RouteAppNodeManager* manager) :
 		rvBounds,
 		"routingView");
 		
-	BRect sbBounds = rvBounds;
-	sbBounds.left -= 1;
-	sbBounds.right = sbBounds.left + 150;
-	sbBounds.top = sbBounds.bottom + 1;
-	sbBounds.bottom = b.bottom + 1;
-	
-	m_statusView = new StatusView(
-		sbBounds);
-	AddChild(m_statusView);
-
 	BRect hsBounds = rvBounds;
-	hsBounds.left = sbBounds.right;
+	hsBounds.left = rvBounds.left + 199;
 	hsBounds.top = hsBounds.bottom + 1;
 	hsBounds.right++;
 	hsBounds.bottom = b.bottom + 1;
@@ -139,6 +129,17 @@ RouteWindow::RouteWindow(RouteAppNodeManager* manager) :
 		m_routingView,
 		0, 0, B_VERTICAL);
 	AddChild(m_vScrollBar);
+
+	BRect svBounds = rvBounds;
+	svBounds.left -= 1;
+	svBounds.right = hsBounds.left;
+	svBounds.top = svBounds.bottom + 1;
+	svBounds.bottom = b.bottom + 1;
+	
+	m_statusView = new StatusView(
+		svBounds,
+		m_hScrollBar);
+	AddChild(m_statusView);
 
 	AddChild(m_routingView);
 
@@ -402,6 +403,16 @@ status_t RouteWindow::importState(
 		m_lastFramePosition = r.LeftTop();
 	}
 
+	// status view width
+	int32 i;
+	err = archive->FindInt32("statusViewWidth", &i);
+	if (err == B_OK) {
+		float diff = i - m_statusView->Bounds().IntegerWidth();
+		m_statusView->ResizeBy(diff, 0.0);
+		m_hScrollBar->ResizeBy(-diff, 0.0);
+		m_hScrollBar->MoveBy(diff, 0.0);
+	}
+
 	// settings
 	bool b;
 	err = archive->FindBool("pullPalettes", &b);
@@ -476,7 +487,11 @@ status_t RouteWindow::exportState(
 
 	archive->AddRect("transportFrame", r);
 	archive->AddBool("transportVisible", b);
-	
+
+	// [c.lenz 23may00] remember status view width
+	int i = m_statusView->Bounds().IntegerWidth();
+	archive->AddInt32("statusViewWidth", i);
+
 //	entry_ref saveRef;
 //	m_savePanel.GetPanelDirectory(&saveRef);
 //	BEntry saveEntry(&saveRef);

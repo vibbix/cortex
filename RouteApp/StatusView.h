@@ -34,7 +34,8 @@ class StatusView :
 public:					// *** ctor/dtor
 
 						StatusView(
-							BRect frame);
+							BRect frame,
+							BScrollBar *scrollBar = 0);
 
 	virtual				~StatusView();
 
@@ -42,6 +43,21 @@ public:					// *** BScrollView impl.
 
 	virtual void		Draw(
 							BRect updateRect);
+
+	virtual void		FrameResized(
+							float width,
+							float height);
+
+	virtual void		MouseDown(
+							BPoint point);
+
+	virtual void		MouseMoved(
+							BPoint point,
+							uint32 transit,
+							const BMessage *message);
+
+	virtual void		MouseUp(
+							BPoint point);
 
 	virtual void		Pulse();
 
@@ -53,6 +69,10 @@ public:					// *** operations
 
 private:				// *** data members
 
+	// the sibling scrollbar which should be resized by the 
+	// status view
+	BScrollBar		   *m_scrollBar;
+
 	BBitmap			   *m_icon;
 
 	// from 0.0 to 1.0
@@ -60,6 +80,9 @@ private:				// *** data members
 
 	// untruncated string
 	BString				m_fullText;
+
+	// is being resized
+	bool				m_dragging;
 };
 
 __END_CORTEX_NAMESPACE
