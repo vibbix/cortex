@@ -32,8 +32,8 @@ class BRegion;
 #include "cortex_defs.h"
 __BEGIN_CORTEX_NAMESPACE
 
-class MediaIcon : public BBitmap
-{
+class MediaIcon :
+	public BBitmap {
 
 public:					// *** ctor/dtor
 
@@ -70,13 +70,24 @@ private:				// *** internal operations
 							const dormant_node_info &nodeInfo);
 
 	void				_findDefaultIconFor(
-							media_type type);
+							bool audioIn,
+							bool audioOut,
+							bool videoIn,
+							bool videoOut);
 
-	static media_type	_getMediaTypeFor(
-							const live_node_info &nodeInfo);
+	static void			_getMediaTypesFor(
+							const live_node_info &nodeInfo,
+							bool *audioIn,
+							bool *audioOut,
+							bool *videoIn,
+							bool *videoOut);
 
-	static media_type	_getMediaTypeFor(
-							const dormant_flavor_info &flavorInfo);
+	static void			_getMediaTypesFor(
+							const dormant_flavor_info &flavorInfo,
+							bool *audioIn,
+							bool *audioOut,
+							bool *videoIn,
+							bool *videoOut);
 
 private:				// *** data
 
