@@ -97,6 +97,19 @@ public:														// *** icon management
 		live_node_info								nodeInfo,
 		icon_size											iconSize);
 
+public:														// *** node info
+
+	// returns true if the node has not been instantiated from a dormant node
+	// and is not owned by Cortex or CortexAddOnHost
+	static bool isAppNode(
+		NodeRef *									ref,
+		app_info *									outAppInfo);
+
+	// returns true if the node is owned either by the media_server or
+	// the media_addon_server
+	static bool isSystemNode(
+		NodeRef *									ref);
+
 public:														// *** notification & error handling
 
 	status_t setNotifyTarget(

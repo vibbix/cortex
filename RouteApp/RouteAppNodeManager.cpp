@@ -2,6 +2,7 @@
 
 #include "RouteAppNodeManager.h"
 
+#include "AddOnHostProtocol.h"
 #include "MediaIcon.h"
 #include "NodeGroup.h"
 #include "NodeRef.h"
@@ -17,11 +18,12 @@
 #include "StringContent.h"
 #include "MediaString.h"
 
+#include <Application.h>
 #include <Autolock.h>
 #include <Debug.h>
 #include <Entry.h>
 #include <Path.h>
-
+#include <Roster.h>
 #include <TimeSource.h>
 
 #include <cstring>
@@ -35,6 +37,7 @@ __USE_CORTEX_NAMESPACE
 #define D_METHOD(x) //PRINT (x)
 #define D_HOOK(x) //PRINT (x)
 #define D_SETTINGS(x) //PRINT (x)
+#define D_STATIC(x) //PRINT (x)
 
 // -------------------------------------------------------- //
 // *** ctor/dtor
@@ -109,6 +112,58 @@ const MediaIcon* RouteAppNodeManager::mediaIconFor(
 		icon_map::value_type(key, icon));
 
 	return icon;
+}
+
+// -------------------------------------------------------- //
+// *** static functions
+// -------------------------------------------------------- //
+
+bool
+RouteAppNodeManager::isAppNode(
+	NodeRef *ref,
+	app_info *outAppInfo) {
+
+	BMediaRoster *roster = BMediaRoster::CurrentRoster();
+	dormant_node_info dormantNodeInfo;
+	if  (roster->GetDormantNodeFor(ref->node(), &dormantNodeInfo) != B_OK) {
+		port_info portInfo;
+		app_info appInfo;
+		if ((get_port_info(ref->node().port, &portInfo) == B_OK)
+		 && (be_roster->GetRunningAppInfo(portInfo.team, &appInfo) == B_OK)) {
+			app_info thisAppInfo;
+			if ((be_app->GetAppInfo(&thisAppInfo) != B_OK)
+			 || ((strcmp(appInfo.signature, thisAppInfo.signature) != 0)
+			 && (strcmp(appInfo.signature, addon_host::g_appSignature) != 0))) {
+				if (outAppInfo)
+					*outAppInfo = appInfo;
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool
+RouteAppNodeManager::isSystemNode(
+	NodeRef *ref) {
+	D_STATIC(("RouteAppNodeManager::isSystemNode()\n"));
+
+	port_info portInfo;
+	app_info appInfo;
+	if ((get_port_info(ref->node().port, &portInfo) == B_OK)
+	 && (be_roster->GetRunningAppInfo(portInfo.team, &appInfo) == B_OK)) {
+		 if ((strcmp(appInfo.signature,
+		 			 "application/x-vnd.Be.media-server") == 0)
+		  || (strcmp(appInfo.signature,
+		  			 "application/x-vnd.Be.addon-host") == 0)
+		  || (strcmp(appInfo.signature,
+		  			 "application/x-vnd.Be-AUSV") == 0)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 // -------------------------------------------------------- //
