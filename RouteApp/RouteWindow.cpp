@@ -42,7 +42,7 @@ const char* const		RouteWindow::s_windowName = "Cortex";
 const BRect RouteWindow::s_initFrame(100,100,700,550);
 
 const char* const g_aboutText =
-"Cortex/Route 2.1.2\n\n"
+"Cortex/Route 2.1.3\n\n"
 "Copyright 1999-2000 Eric Moon\n"
 "All rights reserved.\n\n"
 "The Cortex Team:\n\n"

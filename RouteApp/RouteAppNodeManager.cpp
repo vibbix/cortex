@@ -134,6 +134,8 @@ status_t RouteAppNodeManager::setLogTarget(
 void RouteAppNodeManager::nodeCreated(
 	NodeRef*											ref) {
 
+	status_t err;
+
 	// prepare the log message
 	BMessage logMsg(M_LOG);
 	BString title = "Node '";
@@ -145,28 +147,45 @@ void RouteAppNodeManager::nodeCreated(
 	NodeGroup* g = createGroup(ref->name());
 
 	if(ref->kind() & B_TIME_SOURCE) {
+		// by default, a time source node should use itself as a time reference
+		g->setTimeSource(ref->node());
+
 		// notify observers
 		BMessage m(M_TIME_SOURCE_CREATED);
 		m.AddInt32("nodeID", ref->id());
 		notify(&m);
+	
+		// start it
+		// +++++ this should be a configurable option
+		// [em 8aug00]
+		roster->StartTimeSource(ref->node(), system_time());
+		logMsg.AddString("line", "Started time source");		
 	}
-
-	// adopt node's time source if it's not the system clock (the default)
-	// [em 20mar00]
-	media_node systemClock;
-	status_t err = roster->GetSystemTimeSource(&systemClock);
-	if(err == B_OK)
-	{
-		BTimeSource* ts = roster->MakeTimeSourceFor(ref->node());
-		if(ts->Node() != systemClock)
+	else {
+		// adopt node's time source if it's not the system clock (the default)
+		// [em 20mar00]
+		media_node systemClock;
+		err = roster->GetSystemTimeSource(&systemClock);
+		if(err == B_OK)
 		{
-			g->setTimeSource(ts->Node());
-			logMsg.AddString("line", "Synced to System Clock");
+			BTimeSource* ts = roster->MakeTimeSourceFor(ref->node());
+			if(ts->Node() != systemClock)
+			{
+				g->setTimeSource(ts->Node());
+				logMsg.AddString("line", "Synced to System Clock");
+			}
+			ts->Release();
 		}
-		ts->Release();
 	}
 
 	g->addNode(ref);
+
+	if (ref->kind() & (B_PHYSICAL_INPUT | B_PHYSICAL_OUTPUT))
+	{
+		// +++++ this should be a configurable option
+		// [em 8aug00]
+		g->setGroupFlags(g->groupFlags() | NodeGroup::GROUP_LOCKED);
+	}
 
 	m_logTarget.SendMessage(&logMsg);
 }
