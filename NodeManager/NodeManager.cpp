@@ -23,7 +23,7 @@
 
 __USE_CORTEX_NAMESPACE
 
-#define D_METHOD(x) PRINT (x)
+#define D_METHOD(x) //PRINT (x)
 #define D_MESSAGE(x) //PRINT (x)
 #define D_ROSTER(x) //PRINT (x)
 #define D_LOCK(x) //PRINT (x)
@@ -61,6 +61,12 @@ void NodeManager::connectionMade(
 
 void NodeManager::connectionBroken(
 	const Connection*							connection) {}
+
+void NodeManager::connectionFailed(
+	const media_output &							output,
+	const media_input &								input,
+	const media_format &							format,
+	status_t error) {}
 
 // -------------------------------------------------------- //
 // helpers
@@ -1150,6 +1156,7 @@ status_t NodeManager::connect(
 	if(err < B_OK) {
 		if(outConnection)
 			*outConnection = Connection();
+		connectionFailed(output, input, templateFormat, err);
 		return err;
 	}
 	
@@ -1237,9 +1244,11 @@ status_t NodeManager::connect(
 	
 	if(output.format.type > B_MEDIA_UNKNOWN_TYPE) {
 		f = output.format;
-		if(input.format.type > B_MEDIA_UNKNOWN_TYPE &&
-			f.type != input.format.type)
+		if ((input.format.type > B_MEDIA_UNKNOWN_TYPE) &&
+			(f.type != input.format.type)) {
+			connectionFailed(output, input, f, B_MEDIA_BAD_FORMAT);
 			return B_MEDIA_BAD_FORMAT;
+		}
 	}
 	else if(input.format.type > B_MEDIA_UNKNOWN_TYPE) {
 		f = input.format;
