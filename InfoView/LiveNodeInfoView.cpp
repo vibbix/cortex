@@ -27,7 +27,7 @@ __USE_CORTEX_NAMESPACE
 LiveNodeInfoView::LiveNodeInfoView(
 	const NodeRef *ref)
 	: InfoView(ref->name(), "Live Media Node",
-			   new MediaIcon(ref->nodeInfo(), B_MINI_ICON)),
+			   new MediaIcon(ref->nodeInfo(), B_LARGE_ICON)),
 	  m_ref(ref)
 {
 	D_METHOD(("LiveNodeInfoView::LiveNodeInfoView()\n"));

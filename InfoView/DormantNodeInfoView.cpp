@@ -19,7 +19,7 @@ __USE_CORTEX_NAMESPACE
 DormantNodeInfoView::DormantNodeInfoView(
 	const dormant_node_info &info)
 	: InfoView(info.name, "Dormant Media Node",
-			   new MediaIcon(info, B_MINI_ICON))
+			   new MediaIcon(info, B_LARGE_ICON))
 {
 	D_METHOD(("DormantNodeInfoView::DormantNodeInfoView()\n"));
 

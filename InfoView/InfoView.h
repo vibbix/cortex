@@ -28,8 +28,8 @@
 #include "cortex_defs.h"
 __BEGIN_CORTEX_NAMESPACE
 
-class InfoView : public BView
-{
+class InfoView :
+	public BView {
 
 public:					// *** types
 

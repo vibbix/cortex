@@ -9,8 +9,11 @@
 #include "FileNodeInfoView.h"
 #include "LiveNodeInfoView.h"
 // NodeManager
+#include "AddOnHostProtocol.h"
 #include "NodeRef.h"
 
+// Application Kit
+#include <Roster.h>
 // Interface Kit
 #include <Screen.h>
 // Media Kit
@@ -37,7 +40,7 @@ BPoint InfoWindow::s_lastWindowPosition		= M_INIT_POSITION;
 
 InfoWindow::InfoWindow(
 	const NodeRef *ref)
-	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_TITLED_WINDOW, 0)
+	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_DOCUMENT_WINDOW, 0)
 {
 	D_METHOD(("InfoWindow::InfoWindow(live_node)\n"));
 
@@ -48,22 +51,35 @@ InfoWindow::InfoWindow(
 	{
 		AddChild(new FileNodeInfoView(ref));
 	}
-	else if (roster
-	     && (roster->GetDormantNodeFor(ref->node(), &dormantNodeInfo) == B_OK)
-	     && (dormantNodeInfo.addon == 0))
-	{
-		AddChild(new AppNodeInfoView(ref));
+	else if (roster->GetDormantNodeFor(ref->node(), &dormantNodeInfo) != B_OK) {
+		port_info portInfo;
+		app_info appInfo;
+		if ((get_port_info(ref->node().port, &portInfo) == B_OK)
+		 && (be_roster->GetRunningAppInfo(portInfo.team, &appInfo) == B_OK)) {
+			app_info thisAppInfo;
+			if ((be_app->GetAppInfo(&thisAppInfo) != B_OK)
+			 || ((strcmp(appInfo.signature, thisAppInfo.signature) != 0)
+			 && (strcmp(appInfo.signature, addon_host::g_appSignature) != 0))) {
+				AddChild(new AppNodeInfoView(ref));
+			}
+			else {
+				AddChild(new LiveNodeInfoView(ref));
+			}
+		}
+		else {
+			AddChild(new LiveNodeInfoView(ref));
+		}
 	}
-	else
-	{
+	else {
 		AddChild(new LiveNodeInfoView(ref));
 	}
+
 	_init();
 }
 
 InfoWindow::InfoWindow(
 	const dormant_node_info &info)
-	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_TITLED_WINDOW, 0)
+	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_DOCUMENT_WINDOW, 0)
 {
 	D_METHOD(("InfoWindow::InfoWindow(dormant_node)\n"));
 
@@ -73,7 +89,7 @@ InfoWindow::InfoWindow(
 
 InfoWindow::InfoWindow(
 	const Connection &connection)
-	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_TITLED_WINDOW, 0)
+	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_DOCUMENT_WINDOW, 0)
 {
 	D_METHOD(("InfoWindow::InfoWindow(connection)\n"));
 
@@ -83,7 +99,7 @@ InfoWindow::InfoWindow(
 
 InfoWindow::InfoWindow(
 	const media_input &input)
-	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_TITLED_WINDOW, 0)
+	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_DOCUMENT_WINDOW, 0)
 {
 	D_METHOD(("InfoWindow::InfoWindow(input)\n"));
 
@@ -93,7 +109,7 @@ InfoWindow::InfoWindow(
 
 InfoWindow::InfoWindow(
 	const media_output &output)
-	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_TITLED_WINDOW, 0)
+	: BWindow(InfoView::M_DEFAULT_FRAME, "", B_DOCUMENT_WINDOW, 0)
 {
 	D_METHOD(("InfoWindow::InfoWindow(output)\n"));
 

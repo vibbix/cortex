@@ -19,6 +19,8 @@
 __USE_CORTEX_NAMESPACE
 
 #include <Debug.h>
+#define D_ALLOC(X) //PRINT (x)			// ctor/dtor
+#define D_HOOK(X) //PRINT (x)			// BView impl.
 #define D_METHOD(x) //PRINT (x)
 
 // -------------------------------------------------------- //
@@ -95,34 +97,36 @@ InfoView::InfoView(
 	  m_title(title),
 	  m_subTitle(subTitle),
 	  m_icon(0),
-	  m_fields(0)
-{
-	D_METHOD(("InfoView::InfoView()\n"));
+	  m_fields(0) {
+	D_ALLOC(("InfoView::InfoView()\n"));
 
-	if (icon)
-	{
+	if (icon) {
 		m_icon = new BBitmap(icon);
 	}
-	m_fields = new BList(5);
+	m_fields = new BList();
 	SetViewColor(B_TRANSPARENT_COLOR);
 }
 
-InfoView::~InfoView()
-{
-	D_METHOD(("InfoView::~InfoView()\n"));
+InfoView::~InfoView() {
+	D_ALLOC(("InfoView::~InfoView()\n"));
 
 	// delete all the fields
-	for (int32 i = 0; i < m_fields->CountItems(); i++)
-	{
-		_InfoTextField *field = static_cast<_InfoTextField *>(m_fields->ItemAt(i));
-		delete field;
+	if (m_fields) {
+		while (m_fields->CountItems() > 0) {
+			_InfoTextField *field = static_cast<_InfoTextField *>
+									(m_fields->RemoveItem((int32)0));
+			if (field) {
+				delete field;
+			}
+		}
+		delete m_fields;
+		m_fields = 0;
 	}
-	delete m_fields;
 
 	// delete the icon bitmap
-	if (m_icon)
-	{
+	if (m_icon) {
 		delete m_icon;
+		m_icon = 0;
 	}
 }
 
@@ -130,9 +134,8 @@ InfoView::~InfoView()
 // *** BView implementation
 // -------------------------------------------------------- //
 
-void InfoView::AttachedToWindow()
-{
-	D_METHOD(("InfoView::AttachedToWindow()\n"));
+void InfoView::AttachedToWindow() {
+	D_HOOK(("InfoView::AttachedToWindow()\n"));
 
 	// adjust the windows title
 	BString title = m_title;
@@ -142,27 +145,25 @@ void InfoView::AttachedToWindow()
 	// calculate the area occupied by title, subtitle and icon
 	font_height fh;
 	be_bold_font->GetHeight(&fh);
-	float titleHeight = fh.leading + fh.ascent + fh.descent;
+	float titleHeight = fh.leading + fh.descent;
+	titleHeight += M_V_MARGIN * 2.0 + B_LARGE_ICON / 2.0;
 	be_plain_font->GetHeight(&fh);
 	titleHeight += fh.leading + fh.ascent + fh.descent;
-	titleHeight += 2 * M_V_MARGIN;
 	BFont font(be_bold_font);
 	float titleWidth = font.StringWidth(title.String());
-	titleWidth += 3.0 * M_H_MARGIN + m_sideBarWidth;
+	titleWidth += M_H_MARGIN + B_LARGE_ICON + B_LARGE_ICON / 2.0;
 
 	// adjust the window size to fit the header (icon & title)
-	float newHeight = titleHeight + fh.ascent + 2.0 * fh.leading;
-	float newWidth = 4.0 * m_sideBarWidth + 3.0 * M_H_MARGIN;
-	if (newWidth < titleWidth)
-	{
+	float newHeight = titleHeight + fh.ascent + 2.0 * fh.leading + B_LARGE_ICON / 2.0;
+	float newWidth = 4.0 * m_sideBarWidth + 2.0 * M_H_MARGIN;
+	if (newWidth < titleWidth) {
 		newWidth = titleWidth;
 	}
 	Window()->ResizeTo(newWidth, newHeight);
 
 	// do the line wrapping and calculate required window height
 	float fieldHeight = 0.0;
-	for (int32 i = 0; i < m_fields->CountItems(); i++)
-	{
+	for (int32 i = 0; i < m_fields->CountItems(); i++) {
 		_InfoTextField *field = static_cast<_InfoTextField *>(m_fields->ItemAt(i));
 		field->updateLineWrapping();
 		fieldHeight += field->getHeight() + M_V_MARGIN;
@@ -170,8 +171,8 @@ void InfoView::AttachedToWindow()
 	Window()->ResizeBy(0.0, fieldHeight);
 
 	// set window size limits
-	Window()->SetZoomLimits(newWidth, newHeight + fieldHeight);
 	float minWidth, maxWidth, minHeight, maxHeight;
+	Window()->SetZoomLimits(newWidth, newHeight + fieldHeight);
 	Window()->GetSizeLimits(&minWidth, &maxWidth, &minHeight, &maxHeight);
 	Window()->SetSizeLimits(titleWidth, maxWidth, titleHeight, maxHeight);
 
@@ -179,75 +180,20 @@ void InfoView::AttachedToWindow()
 	m_oldFrame = Bounds();
 }
 
-void InfoView::FrameResized(
-	float width,
-	float height)
-{
-	D_METHOD(("InfoView::FrameResized()\n"));
-
-	BRect newFrame = BRect(0.0, 0.0, width, height);
-
-	// update the each lines' line-wrapping and redraw as necessary
-	font_height fh;
-	BPoint p;
-	be_plain_font->GetHeight(&fh);
-	p.x = M_H_MARGIN;
-	p.y += B_MINI_ICON + 2 * M_V_MARGIN + fh.ascent + 2 * fh.leading;
-	bool heightChanged = false;
-	for (int32 i = 0; i < m_fields->CountItems(); i++)
-	{
-		bool wrappingChanged = false;
-		_InfoTextField *field = static_cast<_InfoTextField *>(m_fields->ItemAt(i));
-		field->updateLineWrapping(&wrappingChanged, 
-								  heightChanged ? 0 : &heightChanged);
-		float fieldHeight = field->getHeight() + M_V_MARGIN;
-		if (heightChanged)
-		{
-			Invalidate(BRect(p.x, p.y, width, p.y + fieldHeight));
-		}
-		else if (wrappingChanged)
-		{
-			Invalidate(BRect(p.x + m_sideBarWidth + M_H_MARGIN, p.y, width, p.y + fieldHeight));
-		}
-		p.y += fieldHeight;
-	}
-
-	// clean up the rest of the view
-	BRect updateRect;
-	updateRect.left = M_H_MARGIN;
-	updateRect.top = p.y < (m_oldFrame.bottom - M_V_MARGIN) ?
-					 p.y : m_oldFrame.bottom - M_V_MARGIN;
-	updateRect.right = width - M_H_MARGIN;
-	updateRect.bottom = m_oldFrame.bottom < newFrame.bottom ?
-						newFrame.bottom : m_oldFrame.bottom;
-	Invalidate(updateRect);
-
-	// cache the new frame rect for the next time
-	m_oldFrame = newFrame;
-}
-
 void InfoView::Draw(
-	BRect updateRect)
-{
-	D_METHOD(("InfoView::Draw()\n"));
+	BRect updateRect) {
+	D_HOOK(("InfoView::Draw()\n"));
 
 	// Draw side bar
 	SetDrawingMode(B_OP_COPY);
 	BRect r = Bounds();
-	r.left += M_H_MARGIN;
-	r.top += M_V_MARGIN;
-	r.right = r.left + m_sideBarWidth;
-	r.bottom -= M_V_MARGIN;
-	SetHighColor(M_LIGHT_BLUE_COLOR);
-	StrokeRect(r, B_SOLID_HIGH);
-	r.InsetBy(1.0, 1.0);
-	SetLowColor(M_DARK_BLUE_COLOR);
+	r.right = B_LARGE_ICON;
+	SetLowColor(tint_color(M_GRAY_COLOR, B_DARKEN_1_TINT));
 	FillRect(r, B_SOLID_LOW);
 
 	// Draw background
 	BRegion region;
 	region.Include(updateRect);
-	r.InsetBy(-1.0, -1.0);
 	region.Exclude(r);
 	SetLowColor(M_GRAY_COLOR);
 	FillRegion(&region, B_SOLID_LOW);
@@ -258,7 +204,8 @@ void InfoView::Draw(
 	font_height fh;
 	font.GetHeight(&fh);
 	SetFont(&font);
-	BPoint p(M_H_MARGIN * 2 + m_sideBarWidth, M_V_MARGIN + fh.ascent + fh.leading);
+	BPoint p(M_H_MARGIN + B_LARGE_ICON + B_LARGE_ICON / 2.0,
+			 M_V_MARGIN * 2.0 + fh.ascent);
 	SetHighColor(M_BLACK_COLOR);
 	DrawString(m_title.String(), p);
 	
@@ -273,22 +220,63 @@ void InfoView::Draw(
 
 	// Draw icon
 	p.y = 2 * M_V_MARGIN;
-	if (m_icon)
-	{
-		p.x = m_sideBarWidth - B_MINI_ICON;
+	if (m_icon) {
+		p.x = B_LARGE_ICON / 2.0;
 		DrawBitmapAsync(m_icon, p);
 	}
 
 	// Draw fields
 	be_plain_font->GetHeight(&fh);
-	p.x = M_H_MARGIN;
-	p.y += B_MINI_ICON + 2 * M_V_MARGIN + fh.ascent + 2 * fh.leading;
-	for (int32 i = 0; i < m_fields->CountItems(); i++)
-	{
+	p.x = B_LARGE_ICON;
+	p.y += B_LARGE_ICON + 2 * M_V_MARGIN + fh.ascent + 2 * fh.leading;
+	for (int32 i = 0; i < m_fields->CountItems(); i++) {
 		_InfoTextField *field = static_cast<_InfoTextField *>(m_fields->ItemAt(i));
 		field->drawField(p);
 		p.y += field->getHeight() + M_V_MARGIN;
 	}
+}
+
+void InfoView::FrameResized(
+	float width,
+	float height) {
+	D_HOOK(("InfoView::FrameResized()\n"));
+
+	BRect newFrame = BRect(0.0, 0.0, width, height);
+
+	// update the each lines' line-wrapping and redraw as necessary
+	font_height fh;
+	BPoint p;
+	be_plain_font->GetHeight(&fh);
+	p.x = B_LARGE_ICON;
+	p.y += B_LARGE_ICON + M_V_MARGIN * 2.0 + fh.ascent + fh.leading * 2.0;
+	bool heightChanged = false;
+	for (int32 i = 0; i < m_fields->CountItems(); i++) {
+		bool wrappingChanged = false;
+		_InfoTextField *field = static_cast<_InfoTextField *>(m_fields->ItemAt(i));
+		field->updateLineWrapping(&wrappingChanged, 
+								  heightChanged ? 0 : &heightChanged);
+		float fieldHeight = field->getHeight() + M_V_MARGIN;
+		if (heightChanged) {
+			Invalidate(BRect(p.x, p.y, width, p.y + fieldHeight));
+		}
+		else if (wrappingChanged) {
+			Invalidate(BRect(p.x + m_sideBarWidth, p.y, width, p.y + fieldHeight));
+		}
+		p.y += fieldHeight;
+	}
+
+	// clean up the rest of the view
+	BRect updateRect;
+	updateRect.left = B_LARGE_ICON;
+	updateRect.top = p.y < (m_oldFrame.bottom - M_V_MARGIN) ?
+					 p.y : m_oldFrame.bottom - M_V_MARGIN;
+	updateRect.right = width - M_H_MARGIN;
+	updateRect.bottom = m_oldFrame.bottom < newFrame.bottom ?
+						newFrame.bottom : m_oldFrame.bottom;
+	Invalidate(updateRect);
+
+	// cache the new frame rect for the next time
+	m_oldFrame = newFrame;
 }
 
 // -------------------------------------------------------- //
@@ -297,8 +285,7 @@ void InfoView::Draw(
 
 void InfoView::addField(
 	BString label,
-	BString text)
-{
+	BString text) {
 	D_METHOD(("InfoView::addField()\n"));
 
 	m_fields->AddItem(reinterpret_cast<void *>
@@ -318,27 +305,29 @@ _InfoTextField::_InfoTextField(
 	: m_label(label),
 	  m_text(text),
 	  m_textLines(0),
-	  m_parent(parent)
-{
-	D_METHOD(("_InfoTextField::_InfoTextField()\n"));
+	  m_parent(parent) {
+	D_ALLOC(("_InfoTextField::_InfoTextField()\n"));
 
-	m_textLines = new BList(1);
+	if (m_label != "") {
+		m_label << ":  ";
+	}
+	m_textLines = new BList();
 }
 
-_InfoTextField::~_InfoTextField()
-{
-	D_METHOD(("_InfoTextField::~_InfoTextField()\n"));
+_InfoTextField::~_InfoTextField() {
+	D_ALLOC(("_InfoTextField::~_InfoTextField()\n"));
 
 	// delete every line
-	for (int32 i = 0; i < m_textLines->CountItems(); i++)
-	{
-		BString *line = static_cast<BString *>(m_textLines->ItemAt(i));
-		if (m_textLines->RemoveItem(line))
-		{
-			delete line;
+	if (m_textLines) {
+		while (m_textLines->CountItems() > 0) {
+			BString *line = static_cast<BString *>(m_textLines->RemoveItem((int32)0));
+			if (line) {
+				delete line;
+			}
 		}
+		delete m_textLines;
+		m_textLines = 0;
 	}
-	delete m_textLines;
 }
 
 // -------------------------------------------------------- //
@@ -348,16 +337,15 @@ _InfoTextField::~_InfoTextField()
 // -------------------------------------------------------- //
 
 void _InfoTextField::drawField(
-	BPoint position)
-{
+	BPoint position) {
 	D_METHOD(("_InfoTextField::drawField()\n"));
 
 	float sideBarWidth = m_parent->getSideBarWidth();
 
 	// Draw label
 	BPoint p = position;
-	p.x += sideBarWidth - be_plain_font->StringWidth(m_label.String()) - InfoView::M_H_MARGIN;
-	m_parent->SetHighColor(M_WHITE_COLOR);
+	p.x += sideBarWidth - be_plain_font->StringWidth(m_label.String());
+	m_parent->SetHighColor(M_BLACK_COLOR);
 	m_parent->SetDrawingMode(B_OP_OVER);
 	m_parent->SetFont(be_plain_font);
 	m_parent->DrawString(m_label.String(), p);
@@ -365,10 +353,9 @@ void _InfoTextField::drawField(
 	// Draw text
 	font_height fh;
 	be_plain_font->GetHeight(&fh);
-	p.x = position.x + sideBarWidth + InfoView::M_H_MARGIN;
+	p.x = position.x + sideBarWidth;// + InfoView::M_H_MARGIN;
 	m_parent->SetHighColor(M_BLACK_COLOR);
-	for (int32 i = 0; i < m_textLines->CountItems(); i++)
-	{
+	for (int32 i = 0; i < m_textLines->CountItems(); i++) {
 		BString *line = static_cast<BString *>(m_textLines->ItemAt(i));
 		m_parent->DrawString(line->String(), p);
 		p.y += fh.ascent + fh.descent + fh.leading;
@@ -397,7 +384,7 @@ void _InfoTextField::updateLineWrapping(
 
 	// calculate the maximum width for a line
 	float maxWidth = m_parent->Bounds().Width();
-	maxWidth -= m_parent->getSideBarWidth() + 3 * InfoView::M_H_MARGIN;
+	maxWidth -= m_parent->getSideBarWidth() + 3 * InfoView::M_H_MARGIN + B_LARGE_ICON;
 	if (maxWidth <= be_plain_font->StringWidth("M"))
 	{
 		return;
