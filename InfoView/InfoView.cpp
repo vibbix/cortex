@@ -8,6 +8,7 @@
 // Interface Kit
 #include <Bitmap.h>
 #include <Region.h>
+#include <ScrollBar.h>
 #include <StringView.h>
 #include <TextView.h>
 #include <Window.h>
@@ -21,6 +22,7 @@ __USE_CORTEX_NAMESPACE
 #include <Debug.h>
 #define D_ALLOC(X) //PRINT (x)			// ctor/dtor
 #define D_HOOK(X) //PRINT (x)			// BView impl.
+#define D_ACCESS(X) //PRINT (x)			// Accessors
 #define D_METHOD(x) //PRINT (x)
 
 // -------------------------------------------------------- //
@@ -56,6 +58,10 @@ public:					// *** operations
 public:					// *** accessors
 
 	float				getHeight() const;
+
+	float				getWidth() const;
+
+	bool				isWrapped() const;
 
 private:				// *** static internal methods
 
@@ -153,26 +159,26 @@ void InfoView::AttachedToWindow() {
 	float titleWidth = font.StringWidth(title.String());
 	titleWidth += M_H_MARGIN + B_LARGE_ICON + B_LARGE_ICON / 2.0;
 
-	// adjust the window size to fit the header (icon & title)
-	float newHeight = titleHeight + fh.ascent + 2.0 * fh.leading + B_LARGE_ICON / 2.0;
-	float newWidth = 4.0 * m_sideBarWidth + 2.0 * M_H_MARGIN;
-	if (newWidth < titleWidth) {
-		newWidth = titleWidth;
-	}
-	Window()->ResizeTo(newWidth, newHeight);
+	float width, height;
+	GetPreferredSize(&width, &height);
+	Window()->ResizeTo(width, height);
+	ResizeBy(- B_V_SCROLL_BAR_WIDTH, 0.0);
 
-	// do the line wrapping and calculate required window height
-	float fieldHeight = 0.0;
-	for (int32 i = 0; i < m_fields->CountItems(); i++) {
-		_InfoTextField *field = static_cast<_InfoTextField *>(m_fields->ItemAt(i));
-		field->updateLineWrapping();
-		fieldHeight += field->getHeight() + M_V_MARGIN;
-	}
-	Window()->ResizeBy(0.0, fieldHeight);
-
+	// add scroll bar
+	BRect scrollRect = Window()->Bounds();
+	scrollRect.left = scrollRect.right - B_V_SCROLL_BAR_WIDTH + 1.0;
+	scrollRect.top -= 1.0;
+	scrollRect.right += 1.0;
+	scrollRect.bottom -= B_H_SCROLL_BAR_HEIGHT - 1.0;
+	Window()->AddChild(new BScrollBar(scrollRect, "ScrollBar", this,
+									  0.0, 0.0, B_VERTICAL));
+	ScrollBar(B_VERTICAL)->SetRange(0.0, 0.0);
+	be_plain_font->GetHeight(&fh);
+	float step = fh.ascent + fh.descent + fh.leading + M_V_MARGIN;
+	ScrollBar(B_VERTICAL)->SetSteps(step, step * 5);
+									
 	// set window size limits
 	float minWidth, maxWidth, minHeight, maxHeight;
-	Window()->SetZoomLimits(newWidth, newHeight + fieldHeight);
 	Window()->GetSizeLimits(&minWidth, &maxWidth, &minHeight, &maxHeight);
 	Window()->SetSizeLimits(titleWidth, maxWidth, titleHeight, maxHeight);
 
@@ -203,10 +209,9 @@ void InfoView::Draw(
 
 	// Draw title
 	SetDrawingMode(B_OP_OVER);
-	BFont font(be_bold_font);
 	font_height fh;
-	font.GetHeight(&fh);
-	SetFont(&font);
+	be_bold_font->GetHeight(&fh);
+	SetFont(be_bold_font);
 	BPoint p(M_H_MARGIN + B_LARGE_ICON + B_LARGE_ICON / 2.0,
 			 M_V_MARGIN * 2.0 + fh.ascent);
 	SetHighColor(M_BLACK_COLOR);
@@ -214,9 +219,8 @@ void InfoView::Draw(
 	
 	// Draw sub-title
 	p.y += fh.descent;
-	font = *be_plain_font;
-	font.GetHeight(&fh);
-	SetFont(&font);
+	be_plain_font->GetHeight(&fh);
+	SetFont(be_plain_font);
 	p.y += fh.ascent + fh.leading;
 	SetHighColor(M_DARK_GRAY_COLOR);
 	DrawString(m_subTitle.String(), p);
@@ -271,15 +275,48 @@ void InfoView::FrameResized(
 	// clean up the rest of the view
 	BRect updateRect;
 	updateRect.left = B_LARGE_ICON;
-	updateRect.top = p.y < (m_oldFrame.bottom - M_V_MARGIN) ?
-					 p.y : m_oldFrame.bottom - M_V_MARGIN;
+	updateRect.top = p.y < (m_oldFrame.bottom - M_V_MARGIN - 15.0) ?
+					 p.y - 15.0 : m_oldFrame.bottom - M_V_MARGIN - 15.0;
 	updateRect.right = width - M_H_MARGIN;
 	updateRect.bottom = m_oldFrame.bottom < newFrame.bottom ?
 						newFrame.bottom : m_oldFrame.bottom;
 	Invalidate(updateRect);
 
+	if (p.y > height) {
+		ScrollBar(B_VERTICAL)->SetRange(0.0, ceil(p.y - height));
+	}
+	else {
+		ScrollBar(B_VERTICAL)->SetRange(0.0, 0.0);
+	}
+
 	// cache the new frame rect for the next time
 	m_oldFrame = newFrame;
+}
+
+void
+InfoView::GetPreferredSize(
+	float *width,
+	float *height) {
+	D_HOOK(("InfoView::GetPreferredSize()\n"));
+
+	*width = 0;
+	*height = 0;
+
+	// calculate the height needed to display everything, avoiding line wrapping
+	font_height fh;
+	be_plain_font->GetHeight(&fh);
+	for (int32 i = 0; i < m_fields->CountItems(); i++) {
+		_InfoTextField *field = static_cast<_InfoTextField *>(m_fields->ItemAt(i));
+		*height += fh.ascent + fh.descent + fh.leading + M_V_MARGIN;
+		float tfw = field->getWidth();
+		if (tfw > *width) {
+			*width = tfw;
+		}
+	}
+
+	*width += B_LARGE_ICON + M_H_MARGIN;
+	*height += B_LARGE_ICON + 2 * M_V_MARGIN + fh.ascent + 2 * fh.leading;
+	*height += B_H_SCROLL_BAR_HEIGHT;
 }
 
 // -------------------------------------------------------- //
@@ -474,9 +511,9 @@ void _InfoTextField::updateLineWrapping(
 // *** accessors (public)
 // -------------------------------------------------------- //
 
-float _InfoTextField::getHeight() const
-{
-	D_METHOD(("_InfoTextField::getHeight()\n"));
+float
+_InfoTextField::getHeight() const {
+	D_ACCESS(("_InfoTextField::getHeight()\n"));
 
 	font_height fh;
 	be_plain_font->GetHeight(&fh);
@@ -495,6 +532,23 @@ float _InfoTextField::getHeight() const
 		height += fh.leading;
 		return height;
 	}
+}
+
+float
+_InfoTextField::getWidth() const {
+	D_ACCESS(("_InfoTextField::getWidth()\n"));
+
+	float width = be_plain_font->StringWidth(m_text.String());
+	width += m_parent->getSideBarWidth();
+
+	return width;
+}
+
+bool
+_InfoTextField::isWrapped() const {
+	D_ACCESS(("_InfoTextField::isWrapped()\n"));
+
+	return (m_textLines->CountItems() > 1); 
 }
 
 // -------------------------------------------------------- //
