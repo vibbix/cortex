@@ -3,6 +3,7 @@
 #include "AddOnHostApp.h"
 #include "AddOnHostProtocol.h"
 
+#include <Alert.h>
 #include <Debug.h>
 #include <MediaRoster.h>
 
@@ -16,8 +17,18 @@ using namespace addon_host;
 // *** implementation
 // -------------------------------------------------------- //
 
-int main() {
+int main(int argc, char** argv) {
 	App app;
+	if(argc < 2 || strcmp(argv[1], "--addon-host") != 0)
+	{
+		int32 response = (new BAlert(
+			"Cortex AddOnHost",
+			"This program runs in the background, and is started automatically "
+			"by Cortex when necessary.  You probably don't want to start it manually.",
+			"Continue", "Quit"))->Go();
+		if(response == 1)
+			return 0;
+	}
 	app.Run();
 	return 0;
 }
