@@ -20,7 +20,10 @@
 __USE_CORTEX_NAMESPACE
 
 #include <Debug.h>
-#define D_METHOD(x) //PRINT (x)
+#define D_ALLOC(x) //PRINT (x)		// ctor/dtor
+#define D_HOOK(x) //PRINT (x)		// BListItem impl.
+#define D_OPERATION(x) //PRINT (x)	// operations
+#define D_COMPARE(x) //PRINT (x)	// compare functions
 
 // -------------------------------------------------------- //
 // constants
@@ -36,39 +39,36 @@ const float DormantNodeListItem::M_ICON_V_MARGIN		= 1.0;
 DormantNodeListItem::DormantNodeListItem(
 	const dormant_node_info &nodeInfo)
 	: m_info(nodeInfo),
-	  m_icon(0)
-{
-	D_METHOD(("DormantNodeListItem::DormantNodeListItem()\n"));
+	  m_icon(0) {
+	D_ALLOC(("DormantNodeListItem::DormantNodeListItem()\n"));
+
 	m_icon = new MediaIcon(nodeInfo, B_MINI_ICON);
 }
 
-DormantNodeListItem::~DormantNodeListItem()
-{
-	D_METHOD(("DormantNodeListItem::~DormantNodeListItem()\n"));
+DormantNodeListItem::~DormantNodeListItem() {
+	D_ALLOC(("DormantNodeListItem::~DormantNodeListItem()\n"));
+
 	delete m_icon;
 }
 	
 // -------------------------------------------------------- //
-// ListItem impl.
+// BListItem impl.
 // -------------------------------------------------------- //
 
 void DormantNodeListItem::DrawItem(
 	BView *owner,
 	BRect frame,
-	bool drawEverything)
-{
-	D_METHOD(("DormantNodeListItem::DrawItem()\n"));
+	bool drawEverything) {
+	D_HOOK(("DormantNodeListItem::DrawItem()\n"));
 
 	// Draw icon
-	if (m_icon)
-	{
+	if (m_icon) {
 		BRect r = frame;
 		r.left += M_ICON_H_MARGIN;
 		r.top += (frame.Height() / 2.0) - (B_MINI_ICON / 2.0);
 		r.right = r.left + B_MINI_ICON - 1.0;
 		r.bottom = r.top + B_MINI_ICON - 1.0;
-		if (IsSelected())
-		{
+		if (IsSelected()) {
 			owner->SetHighColor(255.0, 255.0, 255.0, 255.0);
 			owner->FillRect(r);
 			owner->SetDrawingMode(B_OP_INVERT);
@@ -79,8 +79,7 @@ void DormantNodeListItem::DrawItem(
 			owner->DrawBitmap(m_icon, r.LeftTop());
 			owner->SetDrawingMode(B_OP_OVER);
 		}
-		else
-		{
+		else {
 			owner->SetDrawingMode(B_OP_OVER);
 			owner->DrawBitmap(m_icon, r.LeftTop());
 		}
@@ -92,24 +91,19 @@ void DormantNodeListItem::DrawItem(
 	r.top += (frame.Height() / 2.0) - (m_fontHeight.ascent / 2.0);
 	r.right = r.left + Width();
 	r.bottom = r.top + m_fontHeight.ascent + m_fontHeight.descent;		
-	if (IsSelected() || drawEverything)
-	{
-		if (IsSelected())
-		{
+	if (IsSelected() || drawEverything) {
+		if (IsSelected()) {
 			owner->SetHighColor(16.0, 64.0, 96.0, 255.0);
 		}
-		else
-		{
+		else {
 			owner->SetHighColor(owner->ViewColor());
 		}
 		owner->FillRect(r);
 	}
-	if (IsSelected())
-	{
+	if (IsSelected()) {
 		owner->SetHighColor(255.0, 255.0, 255.0, 255.0);
 	}
-	else
-	{
+	else {
 		owner->SetHighColor(0.0, 0.0, 0.0, 0.0);
 	}
 	BPoint labelOffset(r.left + 1.0, r.bottom - m_fontHeight.descent);
@@ -121,44 +115,47 @@ void DormantNodeListItem::DrawItem(
 
 void DormantNodeListItem::Update(
 	BView *owner,
-	const BFont *font)
-{
-	D_METHOD(("DormantNodeListItem::Update()\n"));
+	const BFont *font) {
+	D_HOOK(("DormantNodeListItem::Update()\n"));
 	BListItem::Update(owner, font);
 
 	SetWidth(font->StringWidth(m_info.name));
 	owner->GetFontHeight(&m_fontHeight);
 	float newHeight = m_fontHeight.ascent + m_fontHeight.descent + m_fontHeight.leading;
-	if (newHeight < B_MINI_ICON)
+	if (newHeight < B_MINI_ICON) {
 		newHeight = B_MINI_ICON;
+	}
 	newHeight += 2 * M_ICON_V_MARGIN;
-	if (Height() < newHeight)
+	if (Height() < newHeight) {
 		SetHeight(newHeight);
+	}
 }
+
+// -------------------------------------------------------- //
+// BListItem impl.
+// -------------------------------------------------------- //
 
 void DormantNodeListItem::mouseOver(
 	BView *owner,
 	BPoint point,
-	uint32 transit)
-{
-	switch (transit)
-	{
-		case B_ENTERED_VIEW:
-		{
+	uint32 transit) {
+	D_OPERATION(("DormantNodeListItem::mouseOver()\n"));
+
+	switch (transit) {
+		case B_ENTERED_VIEW: {
 			TipManager *tips = TipManager::Instance();
 			dormant_flavor_info flavorInfo;
 			BMediaRoster *roster = BMediaRoster::CurrentRoster();
-			if (roster && roster->GetDormantFlavorInfoFor(info(), &flavorInfo) == B_OK)
-			{
+			if (roster && roster->GetDormantFlavorInfoFor(info(), &flavorInfo) == B_OK) {
 				BString tip = flavorInfo.info;
-				if (tip == "")
-					tip = "(no description)";
+				if (tip == "") {
+					tip = m_info.name;
+				}
 				tips->showTip(tip.String(), owner->ConvertToScreen(m_frame));
 			}
 			break;
 		}
-		case B_EXITED_VIEW:
-		{
+		case B_EXITED_VIEW: {
 			TipManager *tips = TipManager::Instance();
 			tips->hideTip(owner->ConvertToScreen(m_frame));
 			break;
@@ -167,38 +164,38 @@ void DormantNodeListItem::mouseOver(
 }
 
 BRect DormantNodeListItem::getRealFrame(
-	const BFont *font) const
-{
+	const BFont *font) const {
+	D_OPERATION(("DormantNodeListItem::getRealFrame()\n"));
+
 	BRect r(0.0, 0.0, -1.0, -1.0);
-	if (m_frame.IsValid())
-	{
+	if (m_frame.IsValid()) {
 		r = m_frame;
 		r.right = r.left + B_MINI_ICON + 2 * M_ICON_H_MARGIN;
 		r.right += font->StringWidth(m_info.name);
 	}
-	else
-	{
+	else {
 		r.right = font->StringWidth(m_info.name);
 		r.right += B_MINI_ICON + 2 * M_ICON_H_MARGIN + 5.0;
 		font_height fh;
 		font->GetHeight(&fh);
 		r.bottom = fh.ascent + fh.descent + fh.leading;
-		if (r.bottom < B_MINI_ICON)
+		if (r.bottom < B_MINI_ICON) {
 			r.bottom = B_MINI_ICON;
+		}
 		r.bottom += 2 * M_ICON_V_MARGIN;
-		if (Height() > r.bottom)
+		if (Height() > r.bottom) {
 			r.bottom = Height();
+		}
 	}
 	return r;
 }
 
-BBitmap *DormantNodeListItem::getDragBitmap()
-{
-	D_METHOD(("DormantNodeListItem::GetDragBitmap()\n"));
+BBitmap *DormantNodeListItem::getDragBitmap() {
+	D_OPERATION(("DormantNodeListItem::getDragBitmap()\n"));
+
 	// Prepare Bitmap for Drag & Drop
 	BBitmap *dragBitmap = new BBitmap(m_frame.OffsetToCopy(BPoint(0.0, 0.0)), B_RGBA32, true); 
-	dragBitmap->Lock();
-	{
+	dragBitmap->Lock(); {
 		BView *dragView = new BView(dragBitmap->Bounds(), "", B_FOLLOW_NONE, 0); 
 		dragBitmap->AddChild(dragView); 
 		dragView->SetOrigin(0.0, 0.0);
@@ -208,8 +205,7 @@ BBitmap *DormantNodeListItem::getDragBitmap()
 		dragView->SetHighColor(0.0, 0.0, 0.0, 128.0);       
 	    dragView->SetBlendingMode(B_CONSTANT_ALPHA, B_ALPHA_COMPOSITE); 
 		// Drawing code back again
-		if (m_icon)
-		{
+		if (m_icon) {
 			BRect r = dragView->Bounds();
 			r.left += M_ICON_H_MARGIN;
 			r.top += (m_frame.Height() / 2.0) - (B_MINI_ICON / 2.0);
@@ -232,9 +228,8 @@ BBitmap *DormantNodeListItem::getDragBitmap()
 
 void DormantNodeListItem::showContextMenu(
 	BPoint point,
-	BView *owner)
-{
-	D_METHOD(("DormantNodeListItem::showContextMenu()\n"));
+	BView *owner) {
+	D_OPERATION(("DormantNodeListItem::showContextMenu()\n"));
 
 	BPopUpMenu *menu = new BPopUpMenu("DormantNodeListItem PopUp", false, false, B_ITEMS_IN_COLUMN);
 	menu->SetFont(be_plain_font);
@@ -255,9 +250,8 @@ void DormantNodeListItem::showContextMenu(
 
 int __CORTEX_NAMESPACE__ compareName(
 	const void *lValue,
-	const void *rValue)
-{
-	D_METHOD(("compareSelectionTime()\n"));
+	const void *rValue) {
+	D_COMPARE(("compareSelectionTime()\n"));
 
 	int returnValue = 0;
 	const DormantNodeListItem *lItem = *(reinterpret_cast<const DormantNodeListItem* const*>
@@ -265,16 +259,13 @@ int __CORTEX_NAMESPACE__ compareName(
 	const DormantNodeListItem *rItem = *(reinterpret_cast<const DormantNodeListItem* const*>
 										(reinterpret_cast<const void* const*>(rValue)));
 	int32 i = 0;
-	while (lItem->info().name[i] == rItem->info().name[i])
-	{
+	while (lItem->info().name[i] == rItem->info().name[i]) {
 		i++;
 	}
-	if (lItem->info().name[i] > rItem->info().name[i])
-	{
+	if (lItem->info().name[i] > rItem->info().name[i]) {
 		return 1;
 	}
-	else
-	{
+	else {
 		return -1;
 	}
 	return returnValue;

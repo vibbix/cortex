@@ -18,24 +18,38 @@ class DormantNodeWindow :
 	
 public:					// *** ctor/dtor
 
-						DormantNodeWindow(BWindow* parent);
+						DormantNodeWindow(
+							BWindow* parent);
 
 	virtual				~DormantNodeWindow();
 
-public:					// *** BHandler impl.
-
-	virtual void		MessageReceived(BMessage* pMsg);
-	
 public:					// *** BWindow impl.
 
 	bool				QuitRequested();
+
+	void				Zoom(
+							BPoint origin,
+							float width,
+							float height);
+
+private:				// *** internal operations
+
+	void				_constrainToScreen();
 
 private:				// *** data
 
 	BWindow*			m_parent;
 	
-	DormantNodeView *m_listView;
-	
+	DormantNodeView*	m_listView;
+
+	BRect				m_manualSize;
+
+	bool				m_zoomed;
+
+	bool				m_zooming;
+
+private:				// *** internal constants
+
 	static const BRect	s_initFrame;
 };
 

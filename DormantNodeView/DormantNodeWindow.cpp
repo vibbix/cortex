@@ -10,12 +10,16 @@
 // Application Kit
 #include <Application.h>
 // Interface Kit
+#include <Screen.h>
 #include <ScrollBar.h>
 
 __USE_CORTEX_NAMESPACE
 
 #include <Debug.h>
-#define D_METHOD(x) //PRINT (x)
+#define D_ALLOC(x)	//PRINT (x)		// ctor/dtor
+#define D_HOOK(x) //PRINT (x)		// BWindow impl.
+#define D_MESSAGE(x) //PRINT (x)	// MessageReceived()
+#define D_INTERNAL(x) //PRINT (x)	// internal operations
 
 // -------------------------------------------------------- //
 // constants
@@ -28,14 +32,17 @@ const BRect DormantNodeWindow::s_initFrame(500.0, 350.0, 640.0, 480.0);
 // ctor/dtor
 // -------------------------------------------------------- //
 
-DormantNodeWindow::DormantNodeWindow(BWindow* parent) :
-	BWindow(s_initFrame, "Media Add-Ons",
-		B_FLOATING_WINDOW_LOOK,
-		B_FLOATING_SUBSET_WINDOW_FEEL,
-		B_WILL_ACCEPT_FIRST_CLICK|B_AVOID_FOCUS|B_ASYNCHRONOUS_CONTROLS),
-	m_parent(parent)
-{
-	D_METHOD(("DormantNodeWindow::DormantNodeWindow()\n"));
+DormantNodeWindow::DormantNodeWindow(
+	BWindow* parent)
+	: BWindow(s_initFrame, "Media Add-Ons",
+			  B_FLOATING_WINDOW_LOOK,
+			  B_FLOATING_SUBSET_WINDOW_FEEL,
+			  B_WILL_ACCEPT_FIRST_CLICK|B_AVOID_FOCUS|B_ASYNCHRONOUS_CONTROLS),
+	  m_parent(parent),
+	  m_zoomed(false),
+	  m_zooming(false) {
+	D_ALLOC(("DormantNodeWindow::DormantNodeWindow()\n"));
+
 	ASSERT(m_parent);
 	AddToSubset(m_parent);
 
@@ -53,48 +60,95 @@ DormantNodeWindow::DormantNodeWindow(BWindow* parent) :
 
 	// Add the ListView
 	AddChild(m_listView);
-
-	//Show();
+	_constrainToScreen();
 }
 
-DormantNodeWindow::~DormantNodeWindow()
-{
-	D_METHOD(("DormantNodeWindow::~DormantNodeWindow()\n"));
+DormantNodeWindow::~DormantNodeWindow() {
+	D_ALLOC(("DormantNodeWindow::~DormantNodeWindow()\n"));
+
 }
 
 // -------------------------------------------------------- //
-// BHandler impl
+// BWindow impl.
 // -------------------------------------------------------- //
 
-void DormantNodeWindow::MessageReceived(
-	BMessage *message)
-{
-	D_METHOD(("DormantNodeWindow::MessageReceived()\n"));
-	switch (message->what)
-	{
-		default:
-		{
-			_inherited::MessageReceived(message);
-		}
-	}
-}
-	
-// -------------------------------------------------------- //
-// BWindow impl
-// -------------------------------------------------------- //
-
-bool DormantNodeWindow::QuitRequested()
-{
-	
-	D_METHOD(("DormantNodeWindow::QuitRequested()\n"));
+bool DormantNodeWindow::QuitRequested() {
+	D_HOOK(("DormantNodeWindow::QuitRequested()\n"));
 
 	// [e.moon 29nov99] the RouteWindow is now responsible for
 	// closing me
-
 	m_parent->PostMessage(RouteWindow::M_TOGGLE_DORMANT_NODE_WINDOW);	
 	return false;
-	//be_app->PostMessage(M_DORMANT_NODE_WINDOW_CLOSED);
-	//return true;
+}
+
+void DormantNodeWindow::Zoom(
+	BPoint origin,
+	float width,
+	float height) {
+	D_HOOK(("DormantNodeWindow::Zoom()\n"));
+
+	m_zooming = true;
+
+	BScreen screen(this);
+	if (!screen.Frame().Contains(Frame())) {
+		m_zoomed = false;
+	}
+
+	if (!m_zoomed) {
+		// resize to the ideal size
+		m_manualSize = Bounds();
+		m_listView->GetPreferredSize(&width, &height);
+		ResizeTo(width + B_V_SCROLL_BAR_WIDTH, height);
+		m_zoomed = true;
+		_constrainToScreen();
+	}
+	else {
+		// resize to the most recent manual size
+		ResizeTo(m_manualSize.Width(), m_manualSize.Height());
+		m_zoomed = false;
+	}
+}
+
+// -------------------------------------------------------- //
+// internal operations
+// -------------------------------------------------------- //
+
+void DormantNodeWindow::_constrainToScreen() {
+	D_INTERNAL(("DormantNodeWindow::_constrainToScreen()\n"));
+	
+	BScreen screen(this);
+	BRect screenRect = screen.Frame();
+	BRect windowRect = Frame();
+
+	// if the window is outside the screen rect
+	// move it to the default position
+	if (!screenRect.Intersects(windowRect)) {
+		windowRect.OffsetTo(screenRect.LeftTop());
+		MoveTo(windowRect.LeftTop());
+		windowRect = Frame();
+	}
+
+	// if the window is larger than the screen rect
+	// resize it to fit at each side
+	if (!screenRect.Contains(windowRect)) {
+		if (windowRect.left < screenRect.left) {
+			windowRect.left = screenRect.left + 5.0;
+			MoveTo(windowRect.LeftTop());
+			windowRect = Frame();
+		}
+		if (windowRect.top < screenRect.top) {
+			windowRect.top = screenRect.top + 5.0;
+			MoveTo(windowRect.LeftTop());
+			windowRect = Frame();
+		}
+		if (windowRect.right > screenRect.right) {
+			windowRect.right = screenRect.right - 5.0;
+		}
+		if (windowRect.bottom > screenRect.bottom) {
+			windowRect.bottom = screenRect.bottom - 5.0;
+		}
+		ResizeTo(windowRect.Width(), windowRect.Height());
+	}
 }
 
 // END -- DormantNodeWindow.cpp --

@@ -25,8 +25,8 @@ __BEGIN_CORTEX_NAMESPACE
 class DormantNodeView;
 class MediaIcon;
 
-class DormantNodeListItem :	public BListItem
-{
+class DormantNodeListItem :
+	public	BListItem {
 	typedef	BListItem _inherited;
 	
 public:					// *** constants

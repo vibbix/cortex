@@ -18,18 +18,16 @@
 #include "cortex_defs.h"
 __BEGIN_CORTEX_NAMESPACE
 
-class DormantNodeView :	public BListView
-{
+class DormantNodeView :
+	public	BListView {
 	typedef	BListView _inherited;
 	
 public:					// *** messages
 
 	enum message_t {
-
 		// OUTBOUND:
 		// B_RAW_TYPE "which" dormant_node_info
 		M_INSTANTIATE_NODE				= 'dNV0'
-
 	};
 	
 public:					// *** ctor/dtor
@@ -47,6 +45,10 @@ public:					// *** BListView impl.
 	
 	virtual void		DetachedFromWindow();
 
+	virtual void		GetPreferredSize(
+							float* width,
+							float* height);
+
 	virtual void		MessageReceived(
 							BMessage *message);
 
@@ -62,6 +64,12 @@ public:					// *** BListView impl.
 							BPoint point,
 							int32 index,
 							bool wasSelected);
+
+private:				// *** internal operations
+
+	void				_populateList();
+
+	void				_freeList();
 
 private:				// *** data
 
