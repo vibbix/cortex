@@ -45,7 +45,7 @@ __USE_CORTEX_NAMESPACE
 
 #include <Debug.h>
 #define D_METHOD(x) //PRINT (x)
-#define D_MESSAGE(x) PRINT (x)
+#define D_MESSAGE(x) //PRINT (x)
 #define D_MOUSE(x) //PRINT (x)
 #define D_KEY(x) //PRINT (x)
 
@@ -1658,6 +1658,10 @@ void MediaRoutingView::_checkDroppedFile(
 	BPoint dropPoint)
 {
 	D_METHOD(("MediaRoutingView::_checkDroppedFile()\n"));
+
+	// [cell 26apr00] traverse links
+	BEntry entry(ref, true);
+	entry.GetRef(ref);
 
 	BNode node(ref);
 	if (node.InitCheck() == B_OK)
