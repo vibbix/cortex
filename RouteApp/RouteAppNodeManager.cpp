@@ -15,6 +15,7 @@
 #include "MessageIO.h"
 #include "NodeSetIOContext.h"
 #include "StringContent.h"
+#include "MediaString.h"
 
 #include <Autolock.h>
 #include <Debug.h>
@@ -33,6 +34,7 @@ __USE_CORTEX_NAMESPACE
 
 #define D_METHOD(x) //PRINT (x)
 #define D_HOOK(x) //PRINT (x)
+#define D_SETTINGS(x) //PRINT (x)
 
 // -------------------------------------------------------- //
 // *** ctor/dtor
@@ -132,6 +134,12 @@ status_t RouteAppNodeManager::setLogTarget(
 void RouteAppNodeManager::nodeCreated(
 	NodeRef*											ref) {
 
+	// prepare the log message
+	BMessage logMsg(M_LOG);
+	BString title = "Node '";
+	title << ref->name() << "' created";
+	logMsg.AddString("title", title);
+
 	// create a default group for the node
 	// [em 8feb00]
 	NodeGroup* g = createGroup(ref->name());
@@ -153,15 +161,24 @@ void RouteAppNodeManager::nodeCreated(
 		if(ts->Node() != systemClock)
 		{
 			g->setTimeSource(ts->Node());
+			logMsg.AddString("line", "Synced to System Clock");
 		}
 		ts->Release();
 	}
 
 	g->addNode(ref);
+
+	m_logTarget.SendMessage(&logMsg);
 }
 
 void RouteAppNodeManager::nodeDeleted(
 	const NodeRef*								ref) {
+
+	// prepare the log message
+	BMessage logMsg(M_LOG);
+	BString title = "Node '";
+	title << ref->name() << "' released";
+	logMsg.AddString("title", title);
 
 	if(ref->kind() & B_TIME_SOURCE) {
 		// notify observers
@@ -169,6 +186,8 @@ void RouteAppNodeManager::nodeDeleted(
 		m.AddInt32("nodeID", ref->id());
 		notify(&m);
 	}
+
+	m_logTarget.SendMessage(&logMsg);
 }
 
 void RouteAppNodeManager::connectionMade(
@@ -178,7 +197,16 @@ void RouteAppNodeManager::connectionMade(
 		"@ RouteAppNodeManager::connectionMade()\n"));
 		
 	status_t err;
-	
+
+	// prepare the log message
+	BMessage logMsg(M_LOG);
+	BString title = "Connection ";
+	if (strcmp(connection->outputName(), connection->inputName()) == 0) {
+		title << "'" << connection->outputName() << "' ";
+	}
+	title << "made";
+	logMsg.AddString("title", title);
+
 	if(!(connection->flags() & Connection::INTERNAL))
 		// don't react to connection Cortex didn't make
 		return;
@@ -187,7 +215,7 @@ void RouteAppNodeManager::connectionMade(
 	NodeRef *producer, *consumer;
 	err = getNodeRef(connection->sourceNode(), &producer);
 	if(err < B_OK) {
-		PRINT((
+		D_HOOK((
 			"!!! RouteAppNodeManager::connectionMade():\n"
 			"    sourceNode (%ld) not found\n",
 			connection->sourceNode()));
@@ -195,12 +223,27 @@ void RouteAppNodeManager::connectionMade(
 	}
 	err = getNodeRef(connection->destinationNode(), &consumer);
 	if(err < B_OK) {
-		PRINT((
+		D_HOOK((
 			"!!! RouteAppNodeManager::connectionMade():\n"
 			"    destinationNode (%ld) not found\n",
 			connection->destinationNode()));
 		return;	
 	}
+
+	// add node names to log messages
+	BString line = "Between:";
+	logMsg.AddString("line", line);
+	line = "    ";
+	line << producer->name() << " and ";
+	line << consumer->name();
+	logMsg.AddString("line", line);
+
+	// add format to log message
+	line = "Negotiated format:";
+	logMsg.AddString("line", line);
+	line = "    ";
+	line << MediaString::getStringFor(connection->format(), false);
+	logMsg.AddString("line", line);
 
 	NodeGroup *group = 0;
 	BString groupName = "Untitled Group ";
@@ -246,6 +289,8 @@ void RouteAppNodeManager::connectionMade(
 		group = createGroup(groupName.String());
 		group->addNode(consumer);			
 	}
+
+	m_logTarget.SendMessage(&logMsg);
 }
 
 void RouteAppNodeManager::connectionBroken(
@@ -254,6 +299,15 @@ void RouteAppNodeManager::connectionBroken(
 	D_HOOK((
 		"@ RouteAppNodeManager::connectionBroken()\n"));
 		
+	// prepare the log message
+	BMessage logMsg(M_LOG);
+	BString title = "Connection ";
+	if (strcmp(connection->outputName(), connection->inputName()) == 0) {
+		title << "'" << connection->outputName() << "' ";
+	}
+	title << "broken";
+	logMsg.AddString("title", title);
+
 	if(!(connection->flags() & Connection::INTERNAL))
 		// don't react to connection Cortex didn't make
 		return;
@@ -267,7 +321,7 @@ void RouteAppNodeManager::connectionBroken(
 	NodeRef *producer, *consumer;
 	err = getNodeRef(connection->sourceNode(), &producer);
 	if(err < B_OK) {
-		PRINT((
+		D_HOOK((
 			"!!! RouteAppNodeManager::connectionMade():\n"
 			"    sourceNode (%ld) not found\n",
 			connection->sourceNode()));
@@ -275,12 +329,20 @@ void RouteAppNodeManager::connectionBroken(
 	}
 	err = getNodeRef(connection->destinationNode(), &consumer);
 	if(err < B_OK) {
-		PRINT((
+		D_HOOK((
 			"!!! RouteAppNodeManager::connectionMade():\n"
 			"    destinationNode (%ld) not found\n",
 			connection->destinationNode()));
 		return;	
 	}
+
+	// add node names to log messages
+	BString line = "Between:";
+	logMsg.AddString("line", line);
+	line = "    ";
+	line << producer->name() << " and ";
+	line << consumer->name();
+	logMsg.AddString("line", line);
 	
 	if(
 		producer->group() &&
@@ -290,6 +352,52 @@ void RouteAppNodeManager::connectionBroken(
 		NodeGroup *newGroup;
 		splitGroup(producer, consumer, &newGroup);
 	}
+
+	m_logTarget.SendMessage(&logMsg);
+}
+
+void RouteAppNodeManager::connectionFailed(
+	const media_output &							output,
+	const media_input &								input,
+	const media_format &							format,
+	status_t										error) {
+	D_HOOK((
+		"@ RouteAppNodeManager::connectionFailed()\n"));
+
+	status_t err;
+		
+	// prepare the log message
+	BMessage logMsg(M_LOG);
+	BString title = "Connection failed";
+	logMsg.AddString("title", title);
+	logMsg.AddInt32("error", error);
+
+	NodeRef *producer, *consumer;
+	err = getNodeRef(output.node.node, &producer);
+	if(err < B_OK) {
+		return;	
+	}
+	err = getNodeRef(input.node.node, &consumer);
+	if(err < B_OK) {
+		return;	
+	}
+
+	// add node names to log messages
+	BString line = "Between:";
+	logMsg.AddString("line", line);
+	line = "    ";
+	line << producer->name() << " and " << consumer->name();
+	logMsg.AddString("line", line);
+
+	// add format to log message
+	line = "Tried format:";
+	logMsg.AddString("line", line);
+	line = "    ";
+	line << MediaString::getStringFor(format, true);
+	logMsg.AddString("line", line);
+
+	// and send it
+	m_logTarget.SendMessage(&logMsg);
 }
 
 // -------------------------------------------------------- //
@@ -314,7 +422,7 @@ void RouteAppNodeManager::xmlExportBegin(
 			NodeRef* ref;
 			err = getNodeRef(id, &ref);
 			if(err < B_OK) {
-				PRINT((
+				D_SETTINGS((
 					"! RVNM::xmlExportBegin(): node %ld doesn't exist\n", id));
 
 				set.removeNodeAt(n);
@@ -322,7 +430,7 @@ void RouteAppNodeManager::xmlExportBegin(
 			}
 			// skip unless internal
 			if(!ref->isInternal()) {
-				PRINT((
+				D_SETTINGS((
 					"! RVNM::xmlExportBegin(): node %ld not internal; skipping.\n", id));
 
 				set.removeNodeAt(n);
@@ -359,7 +467,7 @@ void RouteAppNodeManager::xmlExportContent(
 			NodeRef* ref;
 			err = getNodeRef(id, &ref);
 			if(err < B_OK) {
-				PRINT((
+				D_SETTINGS((
 					"! RouteAppNodeManager::xmlExportContent():\n"
 					"  getNodeRef(%ld) failed: '%s'\n",
 					id, strerror(err)));
@@ -370,7 +478,7 @@ void RouteAppNodeManager::xmlExportContent(
 			vector<Connection> conSet;
 			ref->getInputConnections(conSet);
 			ref->getOutputConnections(conSet);
-			for(int c = 0; c < conSet.size(); ++c)
+			for(uint32 c = 0; c < conSet.size(); ++c)
 				// non-unique connections will be rejected:
 				connections.insert(
 					connection_map::value_type(conSet[c].id(), conSet[c]));
@@ -463,7 +571,7 @@ void RouteAppNodeManager::xmlImportChild(
 			}
 		}
 		else {
-			PRINT((
+			D_SETTINGS((
 				"!!! RouteAppNodeManager::xmlImportChild():\n"
 				"    DormantNodeIO::instantiate() failed:\n"
 				"    '%s'\n",
@@ -481,7 +589,7 @@ void RouteAppNodeManager::xmlImportChild(
 			dynamic_cast<NodeSetIOContext*>(&context),
 			&con);
 		if(err < B_OK) {
-			PRINT((
+			D_SETTINGS((
 				"!!! ConnectionIO::instantiate() failed:\n"
 				"    '%s'\n", strerror(err)));
 		}

@@ -2,6 +2,7 @@
 
 #include "StatusView.h"
 #include "cortex_ui.h"
+#include "RouteAppNodeManager.h"
 #include "TipManager.h"
 
 // Application Kit
@@ -17,15 +18,16 @@
 __USE_CORTEX_NAMESPACE
 
 #include <Debug.h>
-#define D_ALLOC(x) PRINT (x)
-#define D_HOOK(x) PRINT (x)
-#define D_OPERATION(x) //PRINT (x)
+#define D_ALLOC(x) //PRINT(x)
+#define D_HOOK(x) //PRINT(x)
+#define D_MESSAGE(x) //PRINT(x)
+#define D_OPERATION(x) //PRINT(x)
 
 // -------------------------------------------------------- //
 // *** constants
 // -------------------------------------------------------- //
 
-const bigtime_t TEXT_DECAY_TIME = 40 * 1000 * 1000;
+const bigtime_t TEXT_DECAY_TIME = 20 * 1000 * 1000;
 
 // width: 8, height:12, color_space: B_CMAP8
 const unsigned char ERROR_ICON_BITS [] = {
@@ -65,13 +67,15 @@ const unsigned char INFO_ICON_BITS [] = {
 
 StatusView::StatusView(
 	BRect frame,
+	RouteAppNodeManager *manager,
 	BScrollBar *scrollBar)
 	:	BStringView(frame, "StatusView", "", B_FOLLOW_LEFT | B_FOLLOW_BOTTOM,
 					B_FRAME_EVENTS | B_WILL_DRAW),
 		m_scrollBar(scrollBar),
 		m_icon(0),
 		m_opacity(1.0),
-		m_dragging(false) {
+		m_dragging(false),
+		m_manager(manager) {
 	D_ALLOC(("StatusView::StatusView()\n"));
 
 	SetViewColor(B_TRANSPARENT_COLOR);
@@ -89,6 +93,14 @@ StatusView::~StatusView() {
 // -------------------------------------------------------- //
 // *** BScrollView impl
 // -------------------------------------------------------- //
+
+void StatusView::AttachedToWindow() {
+	D_HOOK(("StatusView::AttachedToWindow()\n"));
+
+	if (m_manager) {
+		m_manager->setLogTarget(BMessenger(this, Window()));
+	}	
+}
 
 void StatusView::Draw(
 	BRect updateRect) {
@@ -171,6 +183,36 @@ void StatusView::FrameResized(
 	Window()->SetSizeLimits(minWidth, maxWidth, minHeight, maxHeight);
 }
 
+void StatusView::MessageReceived(
+	BMessage *message) {
+	D_MESSAGE(("StatusView::MessageReceived()\n"));
+
+	switch (message->what) {
+		case RouteAppNodeManager::M_LOG: {
+			D_MESSAGE((" -> RouteAppNodeManager::M_LOG\n"));
+
+			BString title;
+			if (message->FindString("title", &title) != B_OK) {
+				return;
+			}
+			BString details, line;
+			for (int32 i = 0; message->FindString("line", i, &line) == B_OK; i++) {
+				if (details.CountChars() > 0) {
+					details << "\n";
+				}
+				details << line;
+			}
+			status_t error = B_OK;
+			message->FindInt32("error", &error);
+			setMessage(title, details, error);
+			break;
+		}
+		default: {
+			BStringView::MessageReceived(message);
+		}
+	}
+}
+
 void StatusView::MouseDown(
 	BPoint point) {
 	D_HOOK(("StatusView::MouseDown()\n"));
@@ -251,6 +293,65 @@ void StatusView::Pulse() {
 // -------------------------------------------------------- //
 // *** internal operations
 // -------------------------------------------------------- //
+
+void StatusView::setMessage(
+	BString &title,
+	BString &details,
+	status_t error = B_OK) {
+	D_OPERATION(("StatusView::setMessage(%s)\n", title.String()));
+
+	// get the tip manager instance and reset
+	TipManager *manager = TipManager::Instance();
+	manager->removeAll(this);
+
+	// append error string
+	if (error) {
+		title << " (" << strerror(error) << ")";
+	}
+
+	// truncate if necessary
+	bool truncated = false;
+	m_fullText = title;
+	if (be_plain_font->StringWidth(title.String()) > Bounds().Width() - 25.0) {
+		be_plain_font->TruncateString(&title, B_TRUNCATE_END,
+									  Bounds().Width() - 25.0);
+		truncated = true;
+	}
+	BStringView::SetText(title.String());
+
+	if (truncated || details.CountChars() > 0) {
+		BString tip = m_fullText;
+		if (details.CountChars() > 0) {
+			tip << "\n" << details;
+		}
+		manager->setTip(tip.String(), this);
+	}
+
+	if (error) {
+		beep();
+		// set icon
+		if (m_icon) {
+			delete m_icon;
+			m_icon = 0;
+		}
+		BRect iconRect(0.0, 0.0, 7.0, 11.0);
+		m_icon = new BBitmap(iconRect, B_CMAP8);
+		m_icon->SetBits(ERROR_ICON_BITS, 96, 0, B_CMAP8);
+	}
+	else {
+		// set icon
+		if (m_icon) {
+			delete m_icon;
+			m_icon = 0;
+		}
+		BRect iconRect(0.0, 0.0, 7.0, 11.0);
+		m_icon = new BBitmap(iconRect, B_CMAP8);
+		m_icon->SetBits(INFO_ICON_BITS, 96, 0, B_CMAP8);
+	}
+	m_opacity = 1.0;
+	Invalidate();
+	SetFlags(Flags() | B_PULSE_NEEDED);
+}
 
 void StatusView::setErrorMessage(
 	BString text,

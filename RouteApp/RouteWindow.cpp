@@ -138,6 +138,7 @@ RouteWindow::RouteWindow(RouteAppNodeManager* manager) :
 	
 	m_statusView = new StatusView(
 		svBounds,
+		manager,
 		m_hScrollBar);
 	AddChild(m_statusView);
 

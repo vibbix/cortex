@@ -28,6 +28,8 @@ class BBitmap;
 
 __BEGIN_CORTEX_NAMESPACE
 
+class RouteAppNodeManager;
+
 class StatusView :
 	public BStringView {
 	
@@ -35,11 +37,14 @@ public:					// *** ctor/dtor
 
 						StatusView(
 							BRect frame,
+							RouteAppNodeManager *manager,
 							BScrollBar *scrollBar = 0);
 
 	virtual				~StatusView();
 
 public:					// *** BScrollView impl.
+
+	virtual void		AttachedToWindow();
 
 	virtual void		Draw(
 							BRect updateRect);
@@ -47,6 +52,9 @@ public:					// *** BScrollView impl.
 	virtual void		FrameResized(
 							float width,
 							float height);
+
+	virtual void		MessageReceived(
+							BMessage *message);
 
 	virtual void		MouseDown(
 							BPoint point);
@@ -63,26 +71,33 @@ public:					// *** BScrollView impl.
 
 public:					// *** operations
 
+	void				setMessage(
+							BString &title,
+							BString &details,
+							status_t error = B_OK);
+
 	void				setErrorMessage(
 							BString text,
 							bool error = false);
 
-private:				// *** data members
+private:					// *** data members
 
 	// the sibling scrollbar which should be resized by the 
 	// status view
-	BScrollBar		   *m_scrollBar;
+	BScrollBar *			m_scrollBar;
 
-	BBitmap			   *m_icon;
+	BBitmap	*				m_icon;
 
 	// from 0.0 to 1.0
-	float				m_opacity;
+	float					m_opacity;
 
 	// untruncated string
-	BString				m_fullText;
+	BString					m_fullText;
 
 	// is being resized
-	bool				m_dragging;
+	bool					m_dragging;
+
+	RouteAppNodeManager *	m_manager;
 };
 
 __END_CORTEX_NAMESPACE
