@@ -187,9 +187,12 @@ void InfoView::Draw(
 	// Draw side bar
 	SetDrawingMode(B_OP_COPY);
 	BRect r = Bounds();
-	r.right = B_LARGE_ICON;
-	SetLowColor(tint_color(M_GRAY_COLOR, B_DARKEN_1_TINT));
+	r.right = B_LARGE_ICON - 1.0;
+	SetLowColor(M_LIGHT_BLUE_COLOR);
 	FillRect(r, B_SOLID_LOW);
+	SetHighColor(M_DARK_BLUE_COLOR);
+	r.right += 1.0;
+	StrokeLine(r.RightTop(), r.RightBottom(), B_SOLID_HIGH);
 
 	// Draw background
 	BRegion region;
@@ -345,7 +348,7 @@ void _InfoTextField::drawField(
 	// Draw label
 	BPoint p = position;
 	p.x += sideBarWidth - be_plain_font->StringWidth(m_label.String());
-	m_parent->SetHighColor(M_BLACK_COLOR);
+	m_parent->SetHighColor(M_DARK_GRAY_COLOR);
 	m_parent->SetDrawingMode(B_OP_OVER);
 	m_parent->SetFont(be_plain_font);
 	m_parent->DrawString(m_label.String(), p);

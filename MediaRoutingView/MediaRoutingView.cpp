@@ -10,7 +10,7 @@
 // DormantNodeView
 #include "DormantNodeView.h"
 // InfoWindow
-#include "InfoWindow.h"
+#include "InfoWindowManager.h"
 // TransportWindow
 #include "TransportWindow.h"
 // MediaRoutingView
@@ -103,6 +103,9 @@ MediaRoutingView::~MediaRoutingView() {
 	
 	// quit ParameterWindowManager if necessary
 	ParameterWindowManager::shutDown();
+
+	// quit InfoWindowManager if necessary
+	InfoWindowManager::shutDown();
 }
 
 // -------------------------------------------------------- //
@@ -623,7 +626,7 @@ void MediaRoutingView::MessageReceived(
 			_broadcastSelection();
 			break;
 		}
-		case InfoView::M_INFO_WINDOW_REQUESTED:
+		case InfoWindowManager::M_INFO_WINDOW_REQUESTED:
 		{
 			D_MESSAGE(("MediaRoutingView::MessageReceived(InfoView::M_INFO_WINDOW_REQUESTED)\n"));
 			type_code type;
@@ -638,8 +641,11 @@ void MediaRoutingView::MessageReceived(
 					if (message->FindData("input", B_RAW_TYPE, i, &data, &dataSize) == B_OK)
 					{
 						input = *reinterpret_cast<const media_input *>(data);
-						InfoWindow *info = new InfoWindow(input);
-						info->Show();
+						InfoWindowManager *manager = InfoWindowManager::Instance();
+						if (manager && manager->Lock()) {
+							manager->openWindowFor(input);
+							manager->Unlock();
+						}
 					}
 				}
 			}
@@ -653,8 +659,11 @@ void MediaRoutingView::MessageReceived(
 					if (message->FindData("output", B_RAW_TYPE, i, &data, &dataSize) == B_OK)
 					{
 						output = *reinterpret_cast<const media_output *>(data);
-						InfoWindow *info = new InfoWindow(output);
-						info->Show();
+						InfoWindowManager *manager = InfoWindowManager::Instance();
+						if (manager && manager->Lock()) {
+							manager->openWindowFor(output);
+							manager->Unlock();
+						}
 					}
 				}
 			}
@@ -1393,7 +1402,7 @@ void MediaRoutingView::_addShortcuts()
 	Window()->AddShortcut('P', B_COMMAND_KEY | B_SHIFT_KEY,
 						  new BMessage(M_NODE_START_CONTROL_PANEL), this);
 	Window()->AddShortcut('I', B_COMMAND_KEY,
-						  new BMessage(InfoView::M_INFO_WINDOW_REQUESTED), this);
+						  new BMessage(InfoWindowManager::M_INFO_WINDOW_REQUESTED), this);
 }
 
 void MediaRoutingView::_initLayout()
@@ -1547,31 +1556,29 @@ void MediaRoutingView::_changeRunModeForSelection(
 	}
 }
 
-void MediaRoutingView::_openInfoWindowsForSelection()
-{
+void MediaRoutingView::_openInfoWindowsForSelection() {
 	D_METHOD(("MediaRoutingView::_openInfoWindowsForSelection()\n"));
 
-	if (selectedType() == DiagramItem::M_BOX)
-	{
-		for (uint32 i = 0; i < countSelectedItems(); i++)
-		{
+	InfoWindowManager *manager = InfoWindowManager::Instance();
+	if (!manager) {
+		return;
+	}
+
+	if (selectedType() == DiagramItem::M_BOX) {
+		for (uint32 i = 0; i < countSelectedItems(); i++) {
 			MediaNodePanel *panel = dynamic_cast<MediaNodePanel *>(selectedItemAt(i));
-			if (panel)
-			{
-				InfoWindow *window = new InfoWindow(panel->ref);
-				window->Show();
+			if (panel && manager->Lock()) {
+				manager->openWindowFor(panel->ref);
+				manager->Unlock();
 			}
 		}
 	}
-	else if (selectedType() == DiagramItem::M_WIRE)
-	{
-		for (uint32 i = 0; i < countSelectedItems(); i++)
-		{
+	else if (selectedType() == DiagramItem::M_WIRE) {
+		for (uint32 i = 0; i < countSelectedItems(); i++) {
 			MediaWire *wire = dynamic_cast<MediaWire *>(selectedItemAt(i));
-			if (wire)
-			{
-				InfoWindow *window = new InfoWindow(wire->connection);
-				window->Show();
+			if (wire && manager->Lock()) {
+				manager->openWindowFor(wire->connection);
+				manager->Unlock();
 			}
 		}
 	}

@@ -1,6 +1,8 @@
 // LiveNodeInfoView.cpp
 
 #include "LiveNodeInfoView.h"
+// InfoView
+#include "InfoWindowManager.h"
 // NodeManager
 #include "NodeGroup.h"
 #include "NodeRef.h"
@@ -28,7 +30,7 @@ LiveNodeInfoView::LiveNodeInfoView(
 	const NodeRef *ref)
 	: InfoView(ref->name(), "Live Media Node",
 			   new MediaIcon(ref->nodeInfo(), B_LARGE_ICON)),
-	  m_ref(ref)
+	  m_nodeID(ref->id())
 {
 	D_METHOD(("LiveNodeInfoView::LiveNodeInfoView()\n"));
 
@@ -85,57 +87,24 @@ LiveNodeInfoView::LiveNodeInfoView(
 	}
 }
 
-LiveNodeInfoView::~LiveNodeInfoView()
-{
+LiveNodeInfoView::~LiveNodeInfoView() {
 	D_METHOD(("LiveNodeInfoView::~LiveNodeInfoView()\n"));
 
-	// unregister with the NodeRef
-	if (m_ref)
-	{
-		remove_observer(this, m_ref);
-	}
 }
 
 // -------------------------------------------------------- //
 // *** BView implementation (public)
 // -------------------------------------------------------- //
 
-void LiveNodeInfoView::AttachedToWindow()
-{
-	D_METHOD(("LiveNodeInfoView::AttachedToWindow()\n"));
-
-	InfoView::AttachedToWindow();
-	// register with the NodeRef
-	status_t error = add_observer(this, m_ref);
-}
-
-void LiveNodeInfoView::DetachedFromWindow()
-{
+void LiveNodeInfoView::DetachedFromWindow() {
 	D_METHOD(("LiveNodeInfoView::DetachedFromWindow()\n"));
-	remove_observer(this, m_ref);
-}
 
-void LiveNodeInfoView::MessageReceived(
-	BMessage *message)
-{
-	D_METHOD(("LiveNodeInfoView::MessageReceived()\n"));
-
-	switch (message->what)
-	{
-		case NodeRef::M_RELEASED:
-		{
-			D_MESSAGE(("LiveNodeInfoView::MessageReceived(NodeRef::M_RELEASED)\n"));
-			remove_observer(this, m_ref);
-			m_ref = 0;
-			Window()->PostMessage(B_QUIT_REQUESTED);
-			break;
-		}	
-		default:
-		{
-			InfoView::MessageReceived(message);
-			break;
-		}
-	}	
+	InfoWindowManager *manager = InfoWindowManager::Instance();
+	if (manager) {
+		BMessage message(InfoWindowManager::M_LIVE_NODE_WINDOW_CLOSED);
+		message.AddInt32("nodeID", m_nodeID);
+		manager->PostMessage(&message);
+	}
 }
 
 // END -- LiveNodeInfoView.cpp --

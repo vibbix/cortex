@@ -31,15 +31,6 @@ __BEGIN_CORTEX_NAMESPACE
 class InfoView :
 	public BView {
 
-public:					// *** types
-
-	enum message_t {
-		
-		M_INFO_WINDOW_REQUESTED = InfoView_message_base,
-
-		M_INFO_WINDOW_CLOSED // not used yet
-	};
-
 public:					// *** constants
 
 	// the default frame for an InfoView. Is not actually

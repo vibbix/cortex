@@ -15,13 +15,14 @@
 
 #include "InfoView.h"
 
+// Media Kit
 #include <MediaDefs.h>
 
 #include "cortex_defs.h"
 __BEGIN_CORTEX_NAMESPACE
 
-class EndPointInfoView : public InfoView
-{
+class EndPointInfoView : 
+	public InfoView {
 
 public:					// *** ctor/dtor
 
@@ -37,12 +38,26 @@ public:					// *** ctor/dtor
 
 	virtual				~EndPointInfoView();
 	
+public:					// *** BView impl
+
+	// notify InfoWindowManager
+	virtual void		DetachedFromWindow();
+
 private:				// *** internal operations
 
 	// adds media_format related fields to the view
 	// (wildcard-aware)
 	void				_addFormatFields(
 							const media_format &format);
+
+private:				// *** data members
+
+	// true if media_output
+	bool				m_output;
+
+	int32				m_port;
+
+	int32				m_id;
 };
 
 __END_CORTEX_NAMESPACE

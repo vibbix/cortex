@@ -37,6 +37,17 @@ private:				// *** internal operations
 	// (wildcard-aware)
 	void				_addFormatFields(
 							const media_format &format);
+
+public:					// *** BView impl
+
+	// notify InfoWindowManager
+	virtual void		DetachedFromWindow();
+
+private:				// *** data members
+
+	media_source		m_source;
+
+	media_destination	m_destination;
 };
 
 __END_CORTEX_NAMESPACE

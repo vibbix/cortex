@@ -1,9 +1,13 @@
 // DormantNodeInfoView.cpp
 
 #include "DormantNodeInfoView.h"
+// InfoView
+#include "InfoWindowManager.h"
+// Support
 #include "MediaIcon.h"
 #include "MediaString.h"
 
+// Media Kit
 #include <MediaAddOn.h>
 #include <MediaRoster.h>
 
@@ -19,7 +23,9 @@ __USE_CORTEX_NAMESPACE
 DormantNodeInfoView::DormantNodeInfoView(
 	const dormant_node_info &info)
 	: InfoView(info.name, "Dormant Media Node",
-			   new MediaIcon(info, B_LARGE_ICON))
+			   new MediaIcon(info, B_LARGE_ICON)),
+	  m_addOnID(info.addon),
+	  m_flavorID(info.flavor_id)
 {
 	D_METHOD(("DormantNodeInfoView::DormantNodeInfoView()\n"));
 
@@ -110,6 +116,22 @@ DormantNodeInfoView::DormantNodeInfoView(
 DormantNodeInfoView::~DormantNodeInfoView()
 {
 	D_METHOD(("DormantNodeInfoView::~DormantNodeInfoView()\n"));
+}
+
+// -------------------------------------------------------- //
+// *** BView implementation (public)
+// -------------------------------------------------------- //
+
+void DormantNodeInfoView::DetachedFromWindow() {
+	D_METHOD(("DormantNodeInfoView::DetachedFromWindow()\n"));
+
+	InfoWindowManager *manager = InfoWindowManager::Instance();
+	if (manager) {
+		BMessage message(InfoWindowManager::M_DORMANT_NODE_WINDOW_CLOSED);
+		message.AddInt32("addOnID", m_addOnID);
+		message.AddInt32("flavorID", m_flavorID);
+		manager->PostMessage(&message);
+	}
 }
 
 // END -- DormantNodeInfoView.cpp --

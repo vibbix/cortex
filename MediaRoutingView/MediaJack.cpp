@@ -7,7 +7,7 @@
 #include "MediaRoutingView.h"
 #include "MediaWire.h"
 // InfoWindow
-#include "InfoView.h"
+#include "InfoWindowManager.h"
 // Support
 #include "cortex_ui.h"
 #include "MediaString.h"
@@ -713,7 +713,7 @@ void MediaJack::showContextMenu(
 	{
 		media_input input;
 		getInput(&input);
-		BMessage *message = new BMessage(InfoView::M_INFO_WINDOW_REQUESTED);
+		BMessage *message = new BMessage(InfoWindowManager::M_INFO_WINDOW_REQUESTED);
 		message->AddData("input", B_RAW_TYPE, 
 						 reinterpret_cast<const void *>(&input), sizeof(input));
 		menu->AddItem(item = new BMenuItem("Get Info", message));
@@ -722,7 +722,7 @@ void MediaJack::showContextMenu(
 	{
 		media_output output;
 		getOutput(&output);
-		BMessage *message = new BMessage(InfoView::M_INFO_WINDOW_REQUESTED);
+		BMessage *message = new BMessage(InfoWindowManager::M_INFO_WINDOW_REQUESTED);
 		message->AddData("output", B_RAW_TYPE, 
 						 reinterpret_cast<const void *>(&output), sizeof(output));
 		menu->AddItem(item = new BMenuItem("Get Info", message));
