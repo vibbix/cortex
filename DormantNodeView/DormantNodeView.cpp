@@ -149,6 +149,7 @@ void DormantNodeView::MouseDown(
 				BRect r = item->getRealFrame(be_plain_font);
 				if (r.Contains(point)) {
 					item->showContextMenu(point, this);
+					return;
 				}
 			}
 		}
